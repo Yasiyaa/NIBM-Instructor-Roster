@@ -1,0 +1,123 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  DEMONSTRATOR
+  EXECUTIVE
+  INSTRUCTOR
+}
+
+enum RosterStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model User {
+  id            String            @id @default(uuid())
+  fullName      String
+  email         String            @unique
+  role          Role              @default(INSTRUCTOR)
+  phone         String?
+  avatarColor   String?           @default("indigo")
+  isActive      Boolean           @default(true)
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  dutyAssignments DutyAssignment[]
+  nightShifts     NightShift[]
+  leaveRequests   LeaveRequest[]    @relation("InstructorLeaves")
+  approvedLeaves  LeaveRequest[]    @relation("ReviewerLeaves")
+  publishedWeeks  RosterWeek[]      @relation("PublishedWeeks")
+  auditLogs       AuditLog[]
+}
+
+model RosterWeek {
+  id            String            @id @default(uuid())
+  startDate     DateTime
+  endDate       DateTime
+  status        RosterStatus      @default(DRAFT)
+  publishedAt   DateTime?
+  publishedById String?
+  publishedBy   User?             @relation("PublishedWeeks", fields: [publishedById], references: [id])
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  dutyAssignments DutyAssignment[]
+  nightShifts     NightShift[]
+
+  @@unique([startDate, endDate])
+}
+
+model DutyAssignment {
+  id              String          @id @default(uuid())
+  rosterWeekId    String
+  rosterWeek      RosterWeek      @relation(fields: [rosterWeekId], references: [id], onDelete: Cascade)
+  instructorId    String
+  instructor      User            @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  dutyDate        DateTime
+  slotLabel       String
+  startTime       String
+  endTime         String
+  batchName       String
+  moduleName      String
+  roomLab         String?
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([dutyDate, startTime, instructorId])
+}
+
+model NightShift {
+  id              String          @id @default(uuid())
+  rosterWeekId    String
+  rosterWeek      RosterWeek      @relation(fields: [rosterWeekId], references: [id], onDelete: Cascade)
+  instructorId    String
+  instructor      User            @relation(fields: [instructorId], references: [id], onDelete: Cascade)
+  shiftDate       DateTime
+  notes           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([shiftDate, instructorId])
+}
+
+model LeaveRequest {
+  id              String          @id @default(uuid())
+  instructorId    String
+  instructor      User            @relation("InstructorLeaves", fields: [instructorId], references: [id], onDelete: Cascade)
+  startDate       DateTime
+  endDate         DateTime
+  reason          String
+  status          LeaveStatus     @default(PENDING)
+  reviewedById    String?
+  reviewedBy      User?           @relation("ReviewerLeaves", fields: [reviewedById], references: [id])
+  reviewedAt      DateTime?
+  reviewComment   String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+}
+
+model AuditLog {
+  id              String          @id @default(uuid())
+  userId          String?
+  user            User?           @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action          String
+  targetEntity    String
+  targetId        String?
+  metadata        String?
+  createdAt       DateTime        @default(now())
+}
