@@ -19,6 +19,7 @@ export interface DutyAssignment {
   rosterWeekId: string;
   instructorId: string;
   instructorName?: string;
+  instructorPhone?: string;
   dutyDate: string; // YYYY-MM-DD
   slotLabel: string; // "Morning (09:00 - 12:00)", "Afternoon (13:00 - 16:00)", "Sunday CCS (16:30 - 17:30)", etc.
   startTime: string; // "09:00", "13:00", "16:30"
@@ -34,6 +35,7 @@ export interface NightShift {
   rosterWeekId: string;
   instructorId: string;
   instructorName?: string;
+  instructorPhone?: string;
   shiftDate: string; // YYYY-MM-DD
   notes?: string;
 }

@@ -14,6 +14,7 @@ import {
   Filter,
   UserCheck,
   Users,
+  Phone,
 } from 'lucide-react';
 import { submitLeaveAction } from '@/lib/actions';
 
@@ -221,6 +222,16 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
                   <span className="text-xs font-black text-amber-300 block mt-0.5 truncate">
                     {shift.instructorName}
                   </span>
+                  {shift.instructorPhone && (
+                    <a
+                      href={`tel:${shift.instructorPhone.replace(/\s+/g, '')}`}
+                      className="inline-flex items-center gap-1 text-[10px] text-amber-300 hover:text-white mt-1 bg-indigo-950 px-2 py-0.5 rounded font-bold cursor-pointer transition-colors"
+                      title={`Call ${shift.instructorName}`}
+                    >
+                      <Phone className="w-2.5 h-2.5" />
+                      <span>Call</span>
+                    </a>
+                  )}
                   <span className="text-[10px] text-slate-400 block mt-0.5">
                     {shift.shiftDate}
                   </span>
@@ -272,9 +283,21 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
                         </span>
                       </div>
 
-                      <div className="flex items-center space-x-1.5 text-xs font-bold text-slate-900 mb-1">
-                        <UserCheck className="w-3.5 h-3.5 text-purple-600" />
-                        <span>{a.instructorName}</span>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center space-x-1.5 text-xs font-bold text-slate-900">
+                          <UserCheck className="w-3.5 h-3.5 text-purple-600" />
+                          <span>{a.instructorName}</span>
+                        </div>
+                        {a.instructorPhone && (
+                          <a
+                            href={`tel:${a.instructorPhone.replace(/\s+/g, '')}`}
+                            className="inline-flex items-center gap-1 text-[11px] text-purple-700 hover:text-purple-900 bg-purple-100 hover:bg-purple-200 px-2 py-0.5 rounded font-bold cursor-pointer transition-colors"
+                            title={`Call ${a.instructorName}`}
+                          >
+                            <Phone className="w-2.5 h-2.5" />
+                            <span>Call</span>
+                          </a>
+                        )}
                       </div>
 
                       <h4 className="font-bold text-slate-800 text-sm">{a.moduleName}</h4>

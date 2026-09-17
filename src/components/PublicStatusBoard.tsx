@@ -13,6 +13,7 @@ import {
   LogIn,
   CheckCircle2,
   Users,
+  Phone,
 } from 'lucide-react';
 import { getExecutiveReportAction } from '@/lib/actions';
 
@@ -140,15 +141,26 @@ export const PublicStatusBoard: React.FC<PublicStatusBoardProps> = ({
             </div>
             <div>
               <span className="text-[10px] uppercase font-bold text-indigo-300 tracking-wider">
-                Tonight's Night Shift Caretaker
+                Tonight&apos;s Night Shift Caretaker
               </span>
-              <div className="text-base font-bold text-white">
+              <div className="text-base font-bold text-white flex flex-wrap items-center gap-2 mt-0.5">
                 {report.nightDutyInstructor ? (
-                  <span>
-                    Officer on Duty:{' '}
-                    <span className="text-amber-300">{report.nightDutyInstructor.fullName}</span>{' '}
-                    ({report.nightDutyInstructor.phone || 'NIBM Staff'})
-                  </span>
+                  <>
+                    <span>
+                      Officer on Duty:{' '}
+                      <span className="text-amber-300">{report.nightDutyInstructor.fullName}</span>
+                    </span>
+                    {report.nightDutyInstructor.phone && (
+                      <a
+                        href={`tel:${report.nightDutyInstructor.phone.replace(/\s+/g, '')}`}
+                        className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg transition-colors shadow-sm cursor-pointer ml-1"
+                        title={`Call ${report.nightDutyInstructor.fullName} directly`}
+                      >
+                        <Phone className="w-3.5 h-3.5" />
+                        <span>Call ({report.nightDutyInstructor.phone})</span>
+                      </a>
+                    )}
+                  </>
                 ) : (
                   <span className="text-slate-400 font-normal italic">
                     No night duty assigned for this date.
@@ -184,13 +196,25 @@ export const PublicStatusBoard: React.FC<PublicStatusBoardProps> = ({
                   <p className="text-xs text-slate-500">for this time period</p>
                 </div>
               ) : (
-                report.onDuty.map(({ instructor, assignment }) => (
+                    report.onDuty.map(({ instructor, assignment }) => (
                   <div
                     key={assignment.id}
                     className="bg-slate-900/90 rounded-xl p-3.5 border border-slate-700 hover:border-emerald-500/60 transition-colors shadow-2xs"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-white text-sm">{instructor.fullName}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white text-sm">{instructor.fullName}</span>
+                        {instructor.phone && (
+                          <a
+                            href={`tel:${instructor.phone.replace(/\s+/g, '')}`}
+                            className="inline-flex items-center gap-1 text-[11px] bg-emerald-500/20 hover:bg-emerald-500/40 text-emerald-300 border border-emerald-500/40 px-2 py-0.5 rounded font-bold transition-colors cursor-pointer"
+                            title={`Call ${instructor.fullName} (${instructor.phone})`}
+                          >
+                            <Phone className="w-2.5 h-2.5" />
+                            <span>Call</span>
+                          </a>
+                        )}
+                      </div>
                       <span className="text-[11px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60">
                         {assignment.startTime} - {assignment.endTime}
                       </span>
@@ -241,7 +265,7 @@ export const PublicStatusBoard: React.FC<PublicStatusBoardProps> = ({
                 report.freeStandby.map((instructor) => (
                   <div
                     key={instructor.id}
-                    className="bg-slate-900/80 rounded-xl p-3 border border-slate-700/80 flex items-center justify-between"
+                    className="bg-slate-900/80 rounded-xl p-3 border border-slate-700/80 flex items-center justify-between gap-2"
                   >
                     <div className="flex items-center space-x-3">
                       <div className="w-8 h-8 rounded-full bg-amber-950 text-amber-300 border border-amber-800 font-bold text-xs flex items-center justify-center">
@@ -254,9 +278,21 @@ export const PublicStatusBoard: React.FC<PublicStatusBoardProps> = ({
                         </p>
                       </div>
                     </div>
-                    <span className="text-[10px] font-black bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30 uppercase">
-                      Free
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      {instructor.phone && (
+                        <a
+                          href={`tel:${instructor.phone.replace(/\s+/g, '')}`}
+                          className="flex items-center gap-1 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-2.5 py-1.5 rounded-lg transition-colors shadow-xs cursor-pointer"
+                          title={`Call ${instructor.fullName} directly`}
+                        >
+                          <Phone className="w-3 h-3" />
+                          <span>Call</span>
+                        </a>
+                      )}
+                      <span className="text-[10px] font-black bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded border border-amber-500/30 uppercase">
+                        Free
+                      </span>
+                    </div>
                   </div>
                 ))
               )}
@@ -292,12 +328,24 @@ export const PublicStatusBoard: React.FC<PublicStatusBoardProps> = ({
                     className="bg-slate-900/80 rounded-xl p-3.5 border border-rose-900/60"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-white text-sm">{instructor.fullName}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-white text-sm">{instructor.fullName}</span>
+                        {instructor.phone && (
+                          <a
+                            href={`tel:${instructor.phone.replace(/\s+/g, '')}`}
+                            className="inline-flex items-center gap-1 text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white px-2 py-0.5 rounded border border-slate-700 transition-colors"
+                            title={`Call ${instructor.fullName}`}
+                          >
+                            <Phone className="w-2.5 h-2.5" />
+                            <span>Call</span>
+                          </a>
+                        )}
+                      </div>
                       <span className="text-[10px] font-black bg-rose-500/20 text-rose-300 border border-rose-500/30 px-2 py-0.5 rounded uppercase">
                         Leave
                       </span>
                     </div>
-                    <p className="text-xs text-slate-300 italic">"{leave.reason}"</p>
+                    <p className="text-xs text-slate-300 italic">&quot;{leave.reason}&quot;</p>
                     <div className="text-[10px] text-slate-400 mt-2">
                       Duration: {leave.startDate} {leave.startDate !== leave.endDate && `to ${leave.endDate}`}
                     </div>

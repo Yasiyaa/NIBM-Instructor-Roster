@@ -22,6 +22,7 @@ import {
   UserCheck,
   Layers,
   Users,
+  Phone,
 } from 'lucide-react';
 import { reviewLeaveAction, getExecutiveReportAction } from '@/lib/actions';
 import { WeeklyScheduleView } from '@/components/WeeklyScheduleView';
@@ -294,11 +295,23 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                 7-Day Rotation
               </span>
             </div>
-            <div className="text-base font-bold text-white mt-0.5">
+            <div className="text-base font-bold text-white mt-0.5 flex flex-wrap items-center gap-2">
               {report.nightDutyInstructor ? (
-                <span>
-                  Designated Officer: <span className="text-amber-300">{report.nightDutyInstructor.fullName}</span> ({report.nightDutyInstructor.phone || 'N/A'})
-                </span>
+                <>
+                  <span>
+                    Designated Officer: <span className="text-amber-300">{report.nightDutyInstructor.fullName}</span>
+                  </span>
+                  {report.nightDutyInstructor.phone && (
+                    <a
+                      href={`tel:${report.nightDutyInstructor.phone.replace(/\s+/g, '')}`}
+                      className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-2.5 py-1 rounded-lg transition-colors shadow-sm cursor-pointer ml-1"
+                      title={`Call ${report.nightDutyInstructor.fullName}`}
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      <span>Call: {report.nightDutyInstructor.phone}</span>
+                    </a>
+                  )}
+                </>
               ) : (
                 <span className="text-amber-200 italic font-normal">
                   No night shift assigned for this date yet.
@@ -340,7 +353,19 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                   className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 hover:border-emerald-300 transition-colors shadow-xs"
                 >
                   <div className="flex items-center justify-between mb-1.5">
-                    <span className="font-bold text-slate-900 text-sm">{instructor.fullName}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-sm">{instructor.fullName}</span>
+                      {instructor.phone && (
+                        <a
+                          href={`tel:${instructor.phone.replace(/\s+/g, '')}`}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-2 py-0.5 rounded transition-colors cursor-pointer"
+                          title={`Call ${instructor.fullName} (${instructor.phone})`}
+                        >
+                          <Phone className="w-2.5 h-2.5" />
+                          <span>Call</span>
+                        </a>
+                      )}
+                    </div>
                     <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">
                       {assignment.startTime} - {assignment.endTime}
                     </span>
@@ -391,7 +416,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
               report.freeStandby.map((instructor) => (
                 <div
                   key={instructor.id}
-                  className="bg-amber-50/40 rounded-xl p-3.5 border border-amber-200/80 flex items-center justify-between"
+                  className="bg-amber-50/40 rounded-xl p-3.5 border border-amber-200/80 flex items-center justify-between gap-2"
                 >
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 rounded-full bg-amber-200 text-amber-900 font-bold flex items-center justify-center text-xs">
@@ -404,9 +429,21 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                       </p>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold bg-amber-200/80 text-amber-900 px-2 py-1 rounded-full uppercase">
-                    Ready
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {instructor.phone && (
+                      <a
+                        href={`tel:${instructor.phone.replace(/\s+/g, '')}`}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-white bg-emerald-100 hover:bg-emerald-600 border border-emerald-300 px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-2xs"
+                        title={`Call ${instructor.fullName} directly`}
+                      >
+                        <Phone className="w-3 h-3" />
+                        <span>Call</span>
+                      </a>
+                    )}
+                    <span className="text-[10px] font-bold bg-amber-200/80 text-amber-900 px-2 py-1 rounded-full uppercase">
+                      Ready
+                    </span>
+                  </div>
                 </div>
               ))
             )}
@@ -442,12 +479,24 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                   className="bg-rose-50/50 rounded-xl p-3.5 border border-rose-200"
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-semibold text-slate-800 text-sm">{instructor.fullName}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-slate-800 text-sm">{instructor.fullName}</span>
+                      {instructor.phone && (
+                        <a
+                          href={`tel:${instructor.phone.replace(/\s+/g, '')}`}
+                          className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded border border-slate-200 transition-colors"
+                          title={`Call ${instructor.fullName}`}
+                        >
+                          <Phone className="w-2.5 h-2.5" />
+                          <span>Call</span>
+                        </a>
+                      )}
+                    </div>
                     <span className="text-[10px] font-bold bg-rose-200 text-rose-800 px-2 py-0.5 rounded-full uppercase">
                       Leave
                     </span>
                   </div>
-                  <p className="text-xs text-slate-600 italic">"{leave.reason}"</p>
+                  <p className="text-xs text-slate-600 italic">&quot;{leave.reason}&quot;</p>
                   <div className="text-[10px] text-slate-600 mt-2 flex items-center justify-between">
                     <span>
                       Duration: {leave.startDate} to {leave.endDate}

@@ -81,7 +81,9 @@ export function getAllUsers(): User[] {
 }
 
 export function getInstructors(): User[] {
-  return getAllUsers().filter((u) => u.role === 'INSTRUCTOR' && u.id !== 'general-instructor');
+  return getAllUsers().filter(
+    (u) => (u.role === 'INSTRUCTOR' || u.role === 'DEMONSTRATOR') && u.id !== 'general-instructor'
+  );
 }
 
 export function getUserById(id: string): User | undefined {
@@ -145,11 +147,15 @@ export function getDutyAssignments(weekId?: string): DutyAssignment[] {
       )
     : state.dutyAssignments;
 
-  // Enrich with instructor name
-  return assignments.map((a) => ({
-    ...a,
-    instructorName: getUserById(a.instructorId)?.fullName || 'Unassigned',
-  }));
+  // Enrich with instructor name and phone
+  return assignments.map((a) => {
+    const inst = getUserById(a.instructorId);
+    return {
+      ...a,
+      instructorName: inst?.fullName || 'Unassigned',
+      instructorPhone: inst?.phone,
+    };
+  });
 }
 
 export interface AddDutyInput {
@@ -233,10 +239,14 @@ export function getNightShifts(weekId?: string): NightShift[] {
       )
     : state.nightShifts;
 
-  return shifts.map((s) => ({
-    ...s,
-    instructorName: getUserById(s.instructorId)?.fullName || 'Unassigned',
-  }));
+  return shifts.map((s) => {
+    const inst = getUserById(s.instructorId);
+    return {
+      ...s,
+      instructorName: inst?.fullName || 'Unassigned',
+      instructorPhone: inst?.phone,
+    };
+  });
 }
 
 export function setNightShift(rosterWeekId: string, shiftDate: string, instructorId: string, notes?: string): { success: boolean; error?: string } {

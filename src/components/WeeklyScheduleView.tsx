@@ -19,6 +19,7 @@ import {
   AlertCircle,
   Sparkles,
   ExternalLink,
+  Phone,
 } from 'lucide-react';
 
 interface WeeklyScheduleViewProps {
@@ -694,7 +695,14 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                         )}
                       </div>
                       {nightInstructor?.phone && (
-                        <div className="text-[10px] text-indigo-200">{nightInstructor.phone}</div>
+                        <a
+                          href={`tel:${nightInstructor.phone.replace(/\s+/g, '')}`}
+                          className="inline-flex items-center gap-1 text-[10px] text-amber-300 hover:text-white mt-1 bg-indigo-900/80 hover:bg-indigo-800 px-2 py-0.5 rounded font-bold transition-colors cursor-pointer"
+                          title={`Call ${nightInstructor.fullName}`}
+                        >
+                          <Phone className="w-2.5 h-2.5" />
+                          <span>Call: {nightInstructor.phone}</span>
+                        </a>
                       )}
                     </div>
 
@@ -802,7 +810,18 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                         </div>
                         <div>
                           <div className="font-bold text-slate-900">{item.instructor.fullName}</div>
-                          <div className="text-[10px] text-slate-600">{item.instructor.phone || item.instructor.email}</div>
+                          {item.instructor.phone ? (
+                            <a
+                              href={`tel:${item.instructor.phone.replace(/\s+/g, '')}`}
+                              className="inline-flex items-center gap-1 text-[10px] text-emerald-700 hover:text-emerald-900 font-semibold hover:underline"
+                              title={`Call ${item.instructor.fullName}`}
+                            >
+                              <Phone className="w-2.5 h-2.5 text-emerald-600" />
+                              <span>{item.instructor.phone}</span>
+                            </a>
+                          ) : (
+                            <div className="text-[10px] text-slate-600">{item.instructor.email}</div>
+                          )}
                         </div>
                       </div>
                     </td>

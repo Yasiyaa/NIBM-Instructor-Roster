@@ -25,6 +25,7 @@ import {
   ChevronRight,
   UserCheck,
   Copy,
+  Phone,
 } from 'lucide-react';
 import {
   addDutyAction,
@@ -459,6 +460,16 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                 <div className="text-[10px] text-slate-700">
                   Total: {data.sessions + data.nightShifts} duties
                 </div>
+                {inst.phone && (
+                  <a
+                    href={`tel:${inst.phone.replace(/\s+/g, '')}`}
+                    className="inline-flex items-center justify-center gap-1 text-[10px] text-emerald-700 hover:text-emerald-900 font-semibold mt-1 hover:underline cursor-pointer"
+                    title={`Call ${inst.fullName}`}
+                  >
+                    <Phone className="w-2.5 h-2.5" />
+                    <span>{inst.phone}</span>
+                  </a>
+                )}
               </div>
             );
           })}
