@@ -111,7 +111,125 @@
       "status": "DRAFT"
     }
   ],
-  "dutyAssignments": [],
+  "dutyAssignments": [
+    {
+      "id": "assign-1789640756982-trgk",
+      "rosterWeekId": "week-2026-09-17",
+      "instructorId": "user-yasith",
+      "dutyDate": "2026-09-17",
+      "slotLabel": "Morning (09:00 - 12:00)",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "batchName": "DFCS26.3 / DFM 26.3",
+      "moduleName": "Computer system tute",
+      "roomLab": "Hall 10",
+      "instructorName": "Yasith"
+    },
+    {
+      "id": "assign-1789640757144-2hu7",
+      "rosterWeekId": "week-2026-09-17",
+      "instructorId": "user-yasith",
+      "dutyDate": "2026-09-17",
+      "slotLabel": "Afternoon (13:00 - 16:00)",
+      "startTime": "13:00",
+      "endTime": "16:00",
+      "batchName": "DFCS26.3 / DFM 26.3",
+      "moduleName": "Computer system tute",
+      "roomLab": "Hall 10",
+      "instructorName": "Yasith"
+    },
+    {
+      "id": "assign-1789640824630-9lad",
+      "rosterWeekId": "week-2026-09-17",
+      "instructorId": "inst-1",
+      "dutyDate": "2026-09-18",
+      "slotLabel": "Morning (09:00 - 12:00)",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "batchName": "ADAM26.1",
+      "moduleName": "Introduction to photography",
+      "roomLab": "PC 5",
+      "instructorName": "Nithara"
+    },
+    {
+      "id": "assign-1789640824761-218f",
+      "rosterWeekId": "week-2026-09-17",
+      "instructorId": "inst-1",
+      "dutyDate": "2026-09-18",
+      "slotLabel": "Afternoon (13:00 - 16:00)",
+      "startTime": "13:00",
+      "endTime": "16:00",
+      "batchName": "ADAM26.1",
+      "moduleName": "Introduction to photography",
+      "roomLab": "PC 5",
+      "instructorName": "Nithara"
+    },
+    {
+      "id": "assign-1789640857300-q0v0",
+      "rosterWeekId": "week-2026-09-17",
+      "instructorId": "user-yasith",
+      "dutyDate": "2026-09-18",
+      "slotLabel": "Morning (09:00 - 12:00)",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "batchName": "DFCS26.3",
+      "moduleName": "Maths",
+      "roomLab": "LH1",
+      "instructorName": "Yasith"
+    },
+    {
+      "id": "assign-1789640857461-3p6p",
+      "rosterWeekId": "week-2026-09-17",
+      "instructorId": "user-yasith",
+      "dutyDate": "2026-09-18",
+      "slotLabel": "Afternoon (13:00 - 16:00)",
+      "startTime": "13:00",
+      "endTime": "16:00",
+      "batchName": "DFCS26.3",
+      "moduleName": "Maths",
+      "roomLab": "LH1",
+      "instructorName": "Yasith"
+    },
+    {
+      "id": "assign-1789640936717-3zcd",
+      "rosterWeekId": "week-2026-09-17",
+      "instructorId": "inst-2",
+      "dutyDate": "2026-09-18",
+      "slotLabel": "Morning (09:00 - 12:00)",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "batchName": "DNE25.3",
+      "moduleName": "OS Tute",
+      "roomLab": "",
+      "instructorName": "Nipun"
+    },
+    {
+      "id": "assign-1789640936878-pby1",
+      "rosterWeekId": "week-2026-09-17",
+      "instructorId": "inst-2",
+      "dutyDate": "2026-09-18",
+      "slotLabel": "Afternoon (13:00 - 16:00)",
+      "startTime": "13:00",
+      "endTime": "16:00",
+      "batchName": "DNE25.3",
+      "moduleName": "OS Tute",
+      "roomLab": "",
+      "instructorName": "Nipun"
+    },
+    {
+      "id": "assign-1789641003602-qf61",
+      "rosterWeekId": "week-2026-09-17",
+      "instructorId": "inst-6",
+      "dutyDate": "2026-09-20",
+      "slotLabel": "Sunday CCS (16:30 - 17:30)",
+      "startTime": "16:30",
+      "endTime": "17:30",
+      "batchName": "CCS26.3",
+      "moduleName": "Database CW",
+      "roomLab": "",
+      "instructorName": "Poorna"
+    }
+  ],
   "nightShifts": [],
   "leaveRequests": []
 }
