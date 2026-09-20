@@ -1,10 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ExecutiveStatusReport, User } from '@/types';
+import { ExecutiveStatusReport } from '@/types';
 import {
   Calendar,
-  Clock,
   Moon,
   Coffee,
   BookOpen,
@@ -12,38 +11,31 @@ import {
   AlertCircle,
   LogIn,
   CheckCircle2,
-  Users,
   Phone,
 } from 'lucide-react';
 import { getExecutiveReportAction } from '@/lib/actions';
 
 interface PublicStatusBoardProps {
   initialReport: ExecutiveStatusReport;
-  allInstructors: User[];
   onOpenLogin: () => void;
 }
 
 export const PublicStatusBoard: React.FC<PublicStatusBoardProps> = ({
   initialReport,
-  allInstructors,
   onOpenLogin,
 }) => {
   const [selectedDate, setSelectedDate] = useState<string>(initialReport.date);
   const [slotFilter, setSlotFilter] = useState<string>('ALL');
   const [report, setReport] = useState<ExecutiveStatusReport>(initialReport);
-  const [loading, setLoading] = useState(false);
 
   const handleFilterChange = async (newDate: string, newSlot: string) => {
     setSelectedDate(newDate);
     setSlotFilter(newSlot);
-    setLoading(true);
     try {
       const updated = await getExecutiveReportAction(newDate, newSlot);
       setReport(updated);
     } catch (err) {
       console.error('Error fetching status report:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -60,19 +52,19 @@ export const PublicStatusBoard: React.FC<PublicStatusBoardProps> = ({
       <header className="bg-slate-950/80 border-b border-slate-800 sticky top-0 z-50 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-emerald-500 flex items-center justify-center font-black text-white shadow-inner">
+            <div className="h-9 w-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center font-semibold text-sm text-slate-200 tracking-wide">
               NIBM
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h1 className="text-base sm:text-lg font-black tracking-tight text-white">
+                <h1 className="text-sm sm:text-base font-semibold tracking-tight text-white">
                   Instructor Daily Status Board
                 </h1>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded border border-emerald-500/30">
+                <span className="text-[10px] bg-emerald-500/15 text-emerald-400 font-medium px-2 py-0.5 rounded border border-emerald-500/20">
                   Live View
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500">
                 Public Monitor • Who is on duty, who is free, and who is on leave
               </p>
             </div>
@@ -134,26 +126,26 @@ export const PublicStatusBoard: React.FC<PublicStatusBoardProps> = ({
         </div>
 
         {/* Tonight's Night Duty Banner */}
-        <div className="bg-indigo-950/90 border border-indigo-800/80 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md">
+        <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-800 flex items-center justify-center text-amber-300">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400">
               <Moon className="w-5 h-5" />
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-indigo-300 tracking-wider">
+              <span className="text-[10px] uppercase font-medium text-slate-500 tracking-wider">
                 Tonight&apos;s Night Shift Caretaker
               </span>
-              <div className="text-base font-bold text-white flex flex-wrap items-center gap-2 mt-0.5">
+              <div className="text-base font-semibold text-white flex flex-wrap items-center gap-2 mt-0.5">
                 {report.nightDutyInstructor ? (
                   <>
                     <span>
                       Officer on Duty:{' '}
-                      <span className="text-amber-300">{report.nightDutyInstructor.fullName}</span>
+                      <span className="text-indigo-400">{report.nightDutyInstructor.fullName}</span>
                     </span>
                     {report.nightDutyInstructor.phone && (
                       <a
                         href={`tel:${report.nightDutyInstructor.phone.replace(/\s+/g, '')}`}
-                        className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-1 rounded-lg transition-colors shadow-sm cursor-pointer ml-1"
+                        className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium px-3 py-1 rounded-lg transition-colors cursor-pointer ml-1"
                         title={`Call ${report.nightDutyInstructor.fullName} directly`}
                       >
                         <Phone className="w-3.5 h-3.5" />
@@ -169,7 +161,7 @@ export const PublicStatusBoard: React.FC<PublicStatusBoardProps> = ({
               </div>
             </div>
           </div>
-          <span className="text-xs text-indigo-300 bg-indigo-900/80 px-3 py-1.5 rounded-xl border border-indigo-700/60 self-start sm:self-center">
+          <span className="text-xs text-slate-400 bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700 self-start sm:self-center">
             Overnight Lab & Facility Stay
           </span>
         </div>

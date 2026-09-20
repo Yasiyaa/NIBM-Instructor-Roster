@@ -6,7 +6,6 @@ import {
   Calendar,
   Clock,
   Moon,
-  BookOpen,
   MapPin,
   Send,
   CheckCircle2,
@@ -15,11 +14,12 @@ import {
   UserCheck,
   Users,
   Phone,
+  CalendarPlus,
+  Link2,
 } from 'lucide-react';
 import { submitLeaveAction } from '@/lib/actions';
 
 interface InstructorPortalProps {
-  currentUser: User;
   allInstructors: User[];
   dutyAssignments: DutyAssignment[];
   nightShifts: NightShift[];
@@ -29,7 +29,6 @@ interface InstructorPortalProps {
 }
 
 export const InstructorPortal: React.FC<InstructorPortalProps> = ({
-  currentUser,
   allInstructors,
   dutyAssignments,
   nightShifts,
@@ -49,6 +48,33 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [feedLinkCopied, setFeedLinkCopied] = useState(false);
+
+  // Absolute .ics feed URL for the currently filtered instructor (Google Calendar
+  // and webcal:// subscriptions both need a fully-qualified URL, not a relative path).
+  const getCalendarFeedUrl = (instId: string): string | null => {
+    if (typeof window === 'undefined') return null;
+    return `${window.location.origin}/api/calendar/${instId}`;
+  };
+
+  const getGoogleCalendarSubscribeUrl = (instId: string): string | null => {
+    const feedUrl = getCalendarFeedUrl(instId);
+    if (!feedUrl) return null;
+    const webcalUrl = feedUrl.replace(/^https?:\/\//, 'webcal://');
+    return `https://calendar.google.com/calendar/render?cid=${encodeURIComponent(webcalUrl)}`;
+  };
+
+  const handleCopyFeedLink = async (instId: string) => {
+    const feedUrl = getCalendarFeedUrl(instId);
+    if (!feedUrl) return;
+    try {
+      await navigator.clipboard.writeText(feedUrl.replace(/^https?:\/\//, 'webcal://'));
+      setFeedLinkCopied(true);
+      setTimeout(() => setFeedLinkCopied(false), 2500);
+    } catch {
+      alert('Could not copy link. Long-press the Subscribe button and copy the URL manually.');
+    }
+  };
 
   // Filter assignments based on dropdown selection
   const displayedAssignments = dutyAssignments
@@ -105,7 +131,7 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
       setApplicantId('');
       onRefresh();
       setTimeout(() => setSuccessMessage(null), 5000);
-    } catch (err) {
+    } catch {
       setErrorMessage('Failed to submit leave application');
     } finally {
       setIsSubmitting(false);
@@ -115,11 +141,11 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
   return (
     <div className="space-y-6">
       {/* Top Banner: General Instructor Portal Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 rounded-2xl p-6 text-white border border-purple-900/50 shadow-xl">
+      <div className="bg-slate-900 rounded-2xl p-6 text-white border border-slate-800">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center space-x-4">
-            <div className="w-14 h-14 rounded-2xl bg-purple-600 text-white font-black text-xl flex items-center justify-center shadow-inner">
-              <Users className="w-7 h-7" />
+            <div className="w-12 h-12 rounded-xl bg-slate-800 border border-slate-700 text-purple-400 flex items-center justify-center">
+              <Users className="w-6 h-6" />
             </div>
             <div>
               <span className="text-xs text-purple-300 font-semibold uppercase tracking-wider">
@@ -150,6 +176,37 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
                 </option>
               ))}
             </select>
+
+            {selectedInstructorId !== 'ALL' ? (
+              <div className="flex items-center gap-1.5">
+                <a
+                  href={getGoogleCalendarSubscribeUrl(selectedInstructorId) || '#'}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center space-x-1.5 text-[11px] font-bold bg-blue-600 hover:bg-blue-500 text-white px-3 py-2 rounded-xl transition-colors cursor-pointer"
+                  title="Opens Google Calendar's 'Add by URL' subscription flow"
+                >
+                  <CalendarPlus className="w-3.5 h-3.5" />
+                  <span>Subscribe to Google Calendar</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={() => handleCopyFeedLink(selectedInstructorId)}
+                  title="Copy the iCal feed link (for Apple Calendar / Outlook)"
+                  className={`flex items-center justify-center w-8 h-8 rounded-xl transition-colors cursor-pointer ${
+                    feedLinkCopied
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-slate-900 hover:bg-slate-700 text-slate-300 border border-slate-700'
+                  }`}
+                >
+                  {feedLinkCopied ? <CheckCircle2 className="w-3.5 h-3.5" /> : <Link2 className="w-3.5 h-3.5" />}
+                </button>
+              </div>
+            ) : (
+              <span className="text-[11px] text-slate-400 italic px-1">
+                Select an instructor to subscribe to their calendar
+              </span>
+            )}
           </div>
         </div>
 
@@ -192,20 +249,20 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
       {activeSubTab === 'schedule' && (
         <div className="space-y-6">
           {/* 7-Day Night Duty Roster Banner */}
-          <div className="bg-indigo-950/80 border border-indigo-800/80 rounded-2xl p-5 text-white shadow-sm">
+          <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 text-white">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center space-x-2.5">
-                <div className="w-8 h-8 rounded-lg bg-indigo-800 flex items-center justify-center text-amber-300">
+                <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-400">
                   <Moon className="w-4 h-4" />
                 </div>
                 <div>
-                  <h4 className="font-bold text-sm text-white">7-Day Night Duty Roster (Overnight Stay)</h4>
-                  <p className="text-xs text-indigo-300">
+                  <h4 className="font-semibold text-sm text-white">7-Day Night Duty Roster (Overnight Stay)</h4>
+                  <p className="text-xs text-slate-500">
                     Week of {rosterWeek.startDate} to {rosterWeek.endDate}
                   </p>
                 </div>
               </div>
-              <span className="text-[11px] bg-indigo-800/90 text-indigo-200 px-2.5 py-1 rounded-lg font-semibold">
+              <span className="text-[11px] bg-slate-800 text-slate-400 px-2.5 py-1 rounded-lg font-medium">
                 Daily Rotation
               </span>
             </div>
@@ -214,25 +271,25 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
               {displayedNightShifts.map((shift) => (
                 <div
                   key={shift.id}
-                  className="bg-indigo-900/60 border border-indigo-700/60 rounded-xl p-2.5 text-center"
+                  className="bg-slate-800/60 border border-slate-800 rounded-xl p-2.5 text-center"
                 >
-                  <span className="text-[10px] text-indigo-300 font-bold uppercase block">
+                  <span className="text-[10px] text-slate-500 font-semibold uppercase block">
                     {new Date(shift.shiftDate).toLocaleDateString('en-US', { weekday: 'short' })}
                   </span>
-                  <span className="text-xs font-black text-amber-300 block mt-0.5 truncate">
+                  <span className="text-xs font-semibold text-indigo-400 block mt-0.5 truncate">
                     {shift.instructorName}
                   </span>
                   {shift.instructorPhone && (
                     <a
                       href={`tel:${shift.instructorPhone.replace(/\s+/g, '')}`}
-                      className="inline-flex items-center gap-1 text-[10px] text-amber-300 hover:text-white mt-1 bg-indigo-950 px-2 py-0.5 rounded font-bold cursor-pointer transition-colors"
+                      className="inline-flex items-center gap-1 text-[10px] text-slate-400 hover:text-white mt-1 bg-slate-900 px-2 py-0.5 rounded font-medium cursor-pointer transition-colors"
                       title={`Call ${shift.instructorName}`}
                     >
                       <Phone className="w-2.5 h-2.5" />
                       <span>Call</span>
                     </a>
                   )}
-                  <span className="text-[10px] text-slate-400 block mt-0.5">
+                  <span className="text-[10px] text-slate-500 block mt-0.5">
                     {shift.shiftDate}
                   </span>
                 </div>
@@ -241,11 +298,11 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
           </div>
 
           {/* Assigned Teaching Sessions */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-sm p-6">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center space-x-2">
                 <Calendar className="w-5 h-5 text-purple-600" />
-                <h3 className="font-bold text-slate-900 text-base">
+                <h3 className="font-bold text-slate-100 text-base">
                   Teaching Duties & Lab Sessions ({displayedAssignments.length})
                 </h3>
               </div>
@@ -267,31 +324,31 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
                 {displayedAssignments.map((a) => (
                   <div
                     key={a.id}
-                    className="bg-slate-50 border border-slate-200 rounded-2xl p-4 hover:border-purple-300 transition-all shadow-2xs flex flex-col justify-between"
+                    className="bg-slate-800/60 border border-slate-800 rounded-2xl p-4 hover:border-purple-500/20 transition-all shadow-2xs flex flex-col justify-between"
                   >
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-bold text-slate-600 uppercase tracking-wider">
+                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                           {new Date(a.dutyDate).toLocaleDateString('en-US', {
                             weekday: 'short',
                             month: 'short',
                             day: 'numeric',
                           })}
                         </span>
-                        <span className="text-[11px] font-bold bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">
+                        <span className="text-[11px] font-bold bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full">
                           {a.startTime} - {a.endTime}
                         </span>
                       </div>
 
                       <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center space-x-1.5 text-xs font-bold text-slate-900">
+                        <div className="flex items-center space-x-1.5 text-xs font-bold text-slate-100">
                           <UserCheck className="w-3.5 h-3.5 text-purple-600" />
                           <span>{a.instructorName}</span>
                         </div>
                         {a.instructorPhone && (
                           <a
                             href={`tel:${a.instructorPhone.replace(/\s+/g, '')}`}
-                            className="inline-flex items-center gap-1 text-[11px] text-purple-700 hover:text-purple-900 bg-purple-100 hover:bg-purple-200 px-2 py-0.5 rounded font-bold cursor-pointer transition-colors"
+                            className="inline-flex items-center gap-1 text-[11px] text-purple-400 hover:text-purple-400 bg-purple-500/15 hover:bg-purple-500/25 px-2 py-0.5 rounded font-bold cursor-pointer transition-colors"
                             title={`Call ${a.instructorName}`}
                           >
                             <Phone className="w-2.5 h-2.5" />
@@ -300,11 +357,11 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
                         )}
                       </div>
 
-                      <h4 className="font-bold text-slate-800 text-sm">{a.moduleName}</h4>
+                      <h4 className="font-bold text-slate-200 text-sm">{a.moduleName}</h4>
                     </div>
 
-                    <div className="flex items-center justify-between text-xs text-slate-600 mt-4 pt-2.5 border-t border-slate-200">
-                      <span className="font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded text-[11px]">
+                    <div className="flex items-center justify-between text-xs text-slate-400 mt-4 pt-2.5 border-t border-slate-800">
+                      <span className="font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded text-[11px]">
                         Batch: {a.batchName}
                       </span>
                       {a.roomLab && (
@@ -326,8 +383,8 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
       {activeSubTab === 'applyLeave' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Application Form */}
-          <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-            <h3 className="font-bold text-slate-900 text-base mb-1">
+          <div className="lg:col-span-2 bg-slate-900 rounded-2xl border border-slate-800 shadow-sm p-6">
+            <h3 className="font-bold text-slate-100 text-base mb-1">
               Apply for Holiday / Leave
             </h3>
             <p className="text-xs text-slate-500 mb-5">
@@ -335,14 +392,14 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
             </p>
 
             {successMessage && (
-              <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center space-x-2">
+              <div className="mb-4 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 text-xs flex items-center space-x-2">
                 <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-600" />
                 <span>{successMessage}</span>
               </div>
             )}
 
             {errorMessage && (
-              <div className="mb-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-xs flex items-center space-x-2">
+              <div className="mb-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs flex items-center space-x-2">
                 <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
                 <span>{errorMessage}</span>
               </div>
@@ -351,13 +408,13 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
             <form onSubmit={handleApplyLeave} className="space-y-4">
               {/* Select which instructor is applying */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
                   Instructor Name (Cadre of 8)
                 </label>
                 <select
                   value={applicantId}
                   onChange={(e) => setApplicantId(e.target.value)}
-                  className="w-full text-sm border border-slate-300 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                  className="w-full text-sm border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
                   required
                 >
                   <option value="">Select your name from the 8 instructors...</option>
@@ -371,32 +428,32 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
                     Start Date
                   </label>
                   <input
                     type="date"
                     value={startDate}
                     onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full text-sm border border-slate-300 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                    className="w-full text-sm border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
                     End Date (Leave blank if 1-day)
                   </label>
                   <input
                     type="date"
                     value={endDate}
                     onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full text-sm border border-slate-300 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                    className="w-full text-sm border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
                   Reason for Holiday / Leave
                 </label>
                 <textarea
@@ -404,7 +461,7 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   placeholder="e.g. University exam duty, medical leave, family event, personal emergency"
-                  className="w-full text-sm border border-slate-300 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  className="w-full text-sm border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500"
                   required
                 />
               </div>
@@ -423,8 +480,8 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
           </div>
 
           {/* Leave History / Status Log */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col">
-            <h4 className="font-bold text-slate-900 text-sm mb-3">
+          <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-sm p-6 flex flex-col">
+            <h4 className="font-bold text-slate-100 text-sm mb-3">
               Submitted Holiday Requests
             </h4>
 
@@ -437,29 +494,29 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
                 displayedLeaves.map((leave) => (
                   <div
                     key={leave.id}
-                    className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs"
+                    className="bg-slate-800/60 border border-slate-800 rounded-xl p-3 text-xs"
                   >
                     <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-slate-900">{leave.instructorName}</span>
+                      <span className="font-bold text-slate-100">{leave.instructorName}</span>
                       <span
                         className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
                           leave.status === 'APPROVED'
-                            ? 'bg-emerald-100 text-emerald-800'
+                            ? 'bg-emerald-500/15 text-emerald-400'
                             : leave.status === 'REJECTED'
-                            ? 'bg-rose-100 text-rose-800'
-                            : 'bg-amber-100 text-amber-800'
+                            ? 'bg-rose-500/15 text-rose-400'
+                            : 'bg-amber-500/15 text-amber-400'
                         }`}
                       >
                         {leave.status}
                       </span>
                     </div>
-                    <div className="text-[11px] text-slate-600">
+                    <div className="text-[11px] text-slate-400">
                       {leave.startDate} {leave.startDate !== leave.endDate && `to ${leave.endDate}`}
                     </div>
-                    <p className="text-slate-600 italic mt-1">"{leave.reason}"</p>
+                    <p className="text-slate-400 italic mt-1">&ldquo;{leave.reason}&rdquo;</p>
                     {leave.reviewedByName && (
-                      <div className="text-[10px] text-slate-500 mt-1 pt-1 border-t border-slate-200">
-                        Reviewed by <strong>{leave.reviewedByName}</strong>: "{leave.reviewComment}"
+                      <div className="text-[10px] text-slate-500 mt-1 pt-1 border-t border-slate-800">
+                        Reviewed by <strong>{leave.reviewedByName}</strong>: &ldquo;{leave.reviewComment}&rdquo;
                       </div>
                     )}
                   </div>
@@ -472,10 +529,10 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
 
       {/* SUBTAB 3: COLLEAGUES ON HOLIDAY */}
       {activeSubTab === 'teamLeaves' && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+        <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-sm p-6">
           <div className="flex items-center space-x-2 mb-2">
             <Users className="w-5 h-5 text-purple-600" />
-            <h3 className="font-bold text-slate-900 text-base">
+            <h3 className="font-bold text-slate-100 text-base">
               Approved Absence Transparency Board
             </h3>
           </div>
@@ -494,16 +551,16 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
                 .map((leave) => (
                   <div
                     key={leave.id}
-                    className="bg-slate-50 border border-slate-200 rounded-xl p-3.5 flex items-center justify-between"
+                    className="bg-slate-800/60 border border-slate-800 rounded-xl p-3.5 flex items-center justify-between"
                   >
                     <div>
-                      <h5 className="font-bold text-slate-900 text-sm">{leave.instructorName}</h5>
+                      <h5 className="font-bold text-slate-100 text-sm">{leave.instructorName}</h5>
                       <p className="text-xs text-slate-500">
                         Off on: <strong>{leave.startDate}</strong> {leave.startDate !== leave.endDate && `to ${leave.endDate}`}
                       </p>
-                      <p className="text-[11px] text-slate-600 italic mt-0.5">"{leave.reason}"</p>
+                      <p className="text-[11px] text-slate-400 italic mt-0.5">&ldquo;{leave.reason}&rdquo;</p>
                     </div>
-                    <span className="text-[10px] font-bold bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full uppercase">
+                    <span className="text-[10px] font-bold bg-slate-700 text-slate-300 px-2.5 py-1 rounded-full uppercase">
                       On Leave
                     </span>
                   </div>

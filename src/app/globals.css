@@ -24,3 +24,25 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Staff-room printouts (WeeklyScheduleView) must stay legible on paper
+   regardless of the app's dark theme -- force flat black-on-white for
+   every layout container, but leave small inline elements (status dots,
+   icons) alone so the slot-type legend colors still print. */
+@media print {
+  div,
+  section,
+  header,
+  footer,
+  table,
+  thead,
+  tbody,
+  tr,
+  td,
+  th {
+    background: #fff !important;
+    color: #000 !important;
+    border-color: #ccc !important;
+    box-shadow: none !important;
+  }
+}

@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# throwaway data files written by scripts/verify-domain-rules.ts
+data/.test-roster-store-*.json
+.neon
+.claude/*.lock

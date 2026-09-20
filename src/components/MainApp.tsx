@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { User, RosterWeek, DutyAssignment, NightShift, LeaveRequest, ExecutiveStatusReport } from '@/types';
-import { Header } from '@/components/Header';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { User, RosterWeek, DutyAssignment, NightShift, LeaveRequest, ExecutiveStatusReport, AcademicCatalog } from '@/types';
+import { Header, AppTab } from '@/components/Header';
 import { ExecutiveDashboard } from '@/components/ExecutiveDashboard';
 import { SundayPlanner } from '@/components/SundayPlanner';
 import { InstructorPortal } from '@/components/InstructorPortal';
@@ -10,7 +11,9 @@ import { LeaveManagement } from '@/components/LeaveManagement';
 import { LoginPage } from '@/components/LoginPage';
 import { PublicStatusBoard } from '@/components/PublicStatusBoard';
 import { WeeklyScheduleView } from '@/components/WeeklyScheduleView';
-import { getAppData } from '@/lib/actions';
+import { ChangePasswordScreen } from '@/components/ChangePasswordScreen';
+import { AdminUserManagement } from '@/components/AdminUserManagement';
+import { getAppData, logoutAction } from '@/lib/actions';
 
 interface MainAppProps {
   initialData: {
@@ -21,48 +24,39 @@ interface MainAppProps {
     nightShifts: NightShift[];
     leaveRequests: LeaveRequest[];
     executiveReport: ExecutiveStatusReport;
+    catalog: AcademicCatalog;
   };
+  initialCurrentUser: User | null;
 }
 
-export const MainApp: React.FC<MainAppProps> = ({ initialData }) => {
+function defaultTabForRole(user: User | null): AppTab {
+  if (!user) return 'planner';
+  if (user.role === 'INSTRUCTOR') return 'instructor';
+  if (user.role === 'EXECUTIVE') return 'executive';
+  if (user.role === 'ADMIN') return 'admin';
+  return 'planner';
+}
+
+export const MainApp: React.FC<MainAppProps> = ({ initialData, initialCurrentUser }) => {
+  const router = useRouter();
   const [data, setData] = useState(initialData);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isClientLoaded, setIsClientLoaded] = useState(false);
   const [isPublicMode, setIsPublicMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<'executive' | 'weekly' | 'planner' | 'instructor' | 'leaves'>('planner');
+  const [activeTab, setActiveTab] = useState<AppTab>(() => defaultTabForRole(initialCurrentUser));
   const [selectedWeekStart, setSelectedWeekStart] = useState<string>(data.rosterWeek.startDate);
 
-  // Load saved session on client mount
-  useEffect(() => {
-    setIsClientLoaded(true);
-    const savedUserId = localStorage.getItem('nibm_roster_user_id');
-    if (savedUserId) {
-      const found = initialData.users.find((u) => u.id === savedUserId);
-      if (found) {
-        handleUserLogin(found);
-      }
-    }
-  }, [initialData.users]);
+  // The server resolves the session on every request; whenever a different
+  // user arrives via props (login, logout, router.refresh()), reset the
+  // active tab to that user's default landing tab.
+  const [prevUserId, setPrevUserId] = useState<string | null>(initialCurrentUser?.id ?? null);
+  if ((initialCurrentUser?.id ?? null) !== prevUserId) {
+    setPrevUserId(initialCurrentUser?.id ?? null);
+    setActiveTab(defaultTabForRole(initialCurrentUser));
+  }
 
-  const handleUserLogin = (user: User) => {
-    setCurrentUser(user);
-    setIsPublicMode(false);
-    localStorage.setItem('nibm_roster_user_id', user.id);
+  const currentUser = initialCurrentUser;
 
-    // Route to designated dashboard
-    if (user.role === 'INSTRUCTOR') {
-      setActiveTab('instructor');
-    } else if (user.role === 'EXECUTIVE') {
-      setActiveTab('executive');
-    } else {
-      setActiveTab('planner');
-    }
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('nibm_roster_user_id');
-    setCurrentUser(null);
-    setIsPublicMode(false);
+  const handleLogout = async () => {
+    await logoutAction();
   };
 
   const handleWeekChange = async (newStartDate: string) => {
@@ -84,34 +78,29 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData }) => {
     }
   };
 
-  if (!isClientLoaded) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white text-sm">
-        Loading NIBM System...
-      </div>
-    );
-  }
-
   // 1. Unauthenticated Public Status Board (No Login Required)
   if (isPublicMode) {
     return (
       <PublicStatusBoard
         initialReport={data.executiveReport}
-        allInstructors={data.instructors}
         onOpenLogin={() => setIsPublicMode(false)}
       />
     );
   }
 
-  // 2. Login Page (Passes onOpenPublicBoard)
+  // 2. Login Page
   if (!currentUser) {
     return (
       <LoginPage
-        allUsers={data.users}
-        onLogin={handleUserLogin}
+        onLoginSuccess={() => router.refresh()}
         onOpenPublicBoard={() => setIsPublicMode(true)}
       />
     );
+  }
+
+  // 3. Forced password change for admin-issued temp-password accounts
+  if (currentUser.mustChangePassword) {
+    return <ChangePasswordScreen currentUser={currentUser} onDone={() => router.refresh()} />;
   }
 
   const pendingLeaves = data.leaveRequests.filter((l) => l.status === 'PENDING');
@@ -119,9 +108,10 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData }) => {
   const isInstructor = currentUser.role === 'INSTRUCTOR';
   const isExecutive = currentUser.role === 'EXECUTIVE';
   const isDemonstrator = currentUser.role === 'DEMONSTRATOR';
+  const isAdmin = currentUser.role === 'ADMIN';
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col font-sans antialiased text-slate-900">
+    <div className="min-h-screen bg-slate-950 flex flex-col font-sans antialiased text-slate-100">
       {/* Header with Role Restraints */}
       <Header
         currentUser={currentUser}
@@ -136,7 +126,6 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData }) => {
         {/* 1. Instructor Portal: ONLY for Instructors */}
         {isInstructor && activeTab === 'instructor' && (
           <InstructorPortal
-            currentUser={currentUser}
             allInstructors={data.instructors}
             dutyAssignments={data.dutyAssignments}
             nightShifts={data.nightShifts}
@@ -166,15 +155,13 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData }) => {
         {/* 3. Entire Week Master Schedule: For Executive & Demonstrator */}
         {(isExecutive || isDemonstrator) && activeTab === 'weekly' && (
           <WeeklyScheduleView
-            currentUser={currentUser}
             rosterWeek={data.rosterWeek}
             dutyAssignments={data.dutyAssignments}
             nightShifts={data.nightShifts}
             leaveRequests={data.leaveRequests}
             allInstructors={data.instructors}
-            onRefresh={handleRefresh}
             onWeekChange={handleWeekChange}
-            onSelectDateForCockpit={(dateStr) => {
+            onSelectDateForCockpit={() => {
               setActiveTab('executive');
             }}
           />
@@ -189,6 +176,7 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData }) => {
             nightShifts={data.nightShifts}
             leaveRequests={data.leaveRequests}
             allInstructors={data.instructors}
+            catalog={data.catalog}
             onRefresh={handleRefresh}
             onWeekChange={handleWeekChange}
           />
@@ -202,15 +190,18 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData }) => {
             onRefresh={handleRefresh}
           />
         )}
+
+        {/* 5. Admin Console: ONLY for Admin */}
+        {isAdmin && activeTab === 'admin' && <AdminUserManagement currentUser={currentUser} />}
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+      <footer className="bg-slate-900 border-t border-slate-800 py-4 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>
             NIBM Academic & Technical Operations System • SOC / IT Division
           </span>
-          <span className="font-semibold text-slate-600">
+          <span className="font-medium text-slate-400">
             Role: {currentUser.role} • Logged in as {currentUser.fullName}
           </span>
         </div>

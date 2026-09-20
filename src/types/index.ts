@@ -1,9 +1,12 @@
-export type Role = 'DEMONSTRATOR' | 'EXECUTIVE' | 'INSTRUCTOR' | 'GUEST';
+export type Role = 'ADMIN' | 'DEMONSTRATOR' | 'EXECUTIVE' | 'INSTRUCTOR' | 'GUEST';
 
 export type RosterStatus = 'DRAFT' | 'PUBLISHED';
 
 export type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 
+// The public-safe shape of a user: this is what's ever sent to the client.
+// The password hash lives only in storage.ts's internal StoredUser type and
+// must never be attached here.
 export interface User {
   id: string;
   fullName: string;
@@ -12,6 +15,7 @@ export interface User {
   phone?: string;
   avatarColor?: string;
   isActive: boolean;
+  mustChangePassword?: boolean;
 }
 
 export interface DutyAssignment {
@@ -97,4 +101,9 @@ export interface ExecutiveStatusReport {
     leave: LeaveRequest;
   }>;
   nightDutyInstructor?: User;
+}
+
+export interface AcademicCatalog {
+  batches: string[];
+  rooms: string[];
 }

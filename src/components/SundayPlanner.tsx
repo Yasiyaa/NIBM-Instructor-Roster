@@ -1,16 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   User,
   RosterWeek,
   DutyAssignment,
   NightShift,
   LeaveRequest,
+  AcademicCatalog,
 } from '@/types';
 import {
   Calendar,
-  Clock,
   Plus,
   Trash2,
   CheckCircle2,
@@ -19,19 +19,26 @@ import {
   Send,
   Layers,
   Sparkles,
-  BookOpen,
-  MapPin,
   ChevronLeft,
   ChevronRight,
-  UserCheck,
   Copy,
   Phone,
+  MessageCircle,
+  ClipboardCopy,
+  X,
+  CopyPlus,
+  LibraryBig,
 } from 'lucide-react';
 import {
   addDutyAction,
   deleteDutyAction,
   setNightShiftAction,
   publishRosterAction,
+  cloneWeekAction,
+  addBatchAction,
+  removeBatchAction,
+  addRoomAction,
+  removeRoomAction,
 } from '@/lib/actions';
 
 interface SundayPlannerProps {
@@ -41,11 +48,11 @@ interface SundayPlannerProps {
   nightShifts: NightShift[];
   leaveRequests: LeaveRequest[];
   allInstructors: User[];
+  catalog: AcademicCatalog;
   onRefresh: () => void;
   onWeekChange?: (newStartDate: string) => void;
 }
 
-const COMMON_BATCHES = ['DSE 24.1F', 'DCSD 24.1P', 'HDCN 23.2', 'CCS Batch', 'MIS 24.1', 'CSNE 23.1'];
 const COMMON_MODULES = [
   'Database Management Systems',
   'Object-Oriented Programming (Java)',
@@ -56,7 +63,6 @@ const COMMON_MODULES = [
   'Cloud Computing Essentials',
   'Python for Data Science',
 ];
-const COMMON_ROOMS = ['Lab 01', 'Lab 02', 'Lab 03', 'Lab 04', 'CISCO Lab', 'Main Auditorium Hall'];
 
 export const SundayPlanner: React.FC<SundayPlannerProps> = ({
   currentUser,
@@ -65,6 +71,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
   nightShifts,
   leaveRequests,
   allInstructors,
+  catalog,
   onRefresh,
   onWeekChange,
 }) => {
@@ -84,13 +91,17 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [publishMessage, setPublishMessage] = useState<string | null>(null);
+  const [isCloning, setIsCloning] = useState(false);
+  const [cloneMessage, setCloneMessage] = useState<string | null>(null);
 
   // Dynamic Week Starting Date State (User can plan starting from ANY date!)
   const [planningStartDate, setPlanningStartDate] = useState<string>(rosterWeek.startDate);
+  const [prevRosterStartDate, setPrevRosterStartDate] = useState<string>(rosterWeek.startDate);
 
-  React.useEffect(() => {
+  if (rosterWeek.startDate !== prevRosterStartDate) {
+    setPrevRosterStartDate(rosterWeek.startDate);
     setPlanningStartDate(rosterWeek.startDate);
-  }, [rosterWeek.startDate]);
+  }
 
   const handleDateChange = (newDateStr: string) => {
     setPlanningStartDate(newDateStr);
@@ -177,7 +188,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
       batchName: assignment.batchName,
       moduleName: assignment.moduleName,
       roomLab: assignment.roomLab,
-    });
+    }, currentUser.id);
     setIsSubmitting(false);
 
     if (!res.success) {
@@ -217,7 +228,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
       batchName: batchName.trim(),
       moduleName: moduleName.trim(),
       roomLab: roomLab.trim(),
-    });
+    }, currentUser.id);
 
     if (!res.success) {
       setIsSubmitting(false);
@@ -242,7 +253,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
         batchName: batchName.trim(),
         moduleName: moduleName.trim(),
         roomLab: roomLab.trim(),
-      });
+      }, currentUser.id);
     }
 
     setIsSubmitting(false);
@@ -253,7 +264,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
   // Remove duty slot
   const handleDeleteDuty = async (id: string) => {
     if (confirm('Remove this duty allocation?')) {
-      await deleteDutyAction(id);
+      await deleteDutyAction(id, currentUser.id);
       onRefresh();
     }
   };
@@ -261,7 +272,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
   // Set night shift instructor
   const handleSetNightShift = async (shiftDate: string, newInstructorId: string) => {
     if (!newInstructorId) return;
-    const res = await setNightShiftAction(rosterWeek.id, shiftDate, newInstructorId);
+    const res = await setNightShiftAction(rosterWeek.id, shiftDate, newInstructorId, currentUser.id);
     if (!res.success) {
       alert(res.error);
     } else {
@@ -279,6 +290,32 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
     }
   };
 
+  // Clone the preceding 7 days' assignments and night shifts into this week's draft
+  const handleCloneWeek = async () => {
+    if (
+      !confirm(
+        `Clone last week's duties and night shifts into the week starting ${planningStartDate}? Collisions and approved-leave conflicts will be skipped automatically.`
+      )
+    ) {
+      return;
+    }
+    setIsCloning(true);
+    setCloneMessage(null);
+    try {
+      const result = await cloneWeekAction(planningStartDate, currentUser.id);
+      const skippedCount = result.skippedDuties.length + result.skippedNightShifts.length;
+      setCloneMessage(
+        `Cloned ${result.clonedDuties} duty session${result.clonedDuties === 1 ? '' : 's'} and ${result.clonedNightShifts} night shift${
+          result.clonedNightShifts === 1 ? '' : 's'
+        } from the previous week.${skippedCount > 0 ? ` ${skippedCount} skipped due to conflicts.` : ''}`
+      );
+      setTimeout(() => setCloneMessage(null), 8000);
+      onRefresh();
+    } finally {
+      setIsCloning(false);
+    }
+  };
+
   // Helper to check if instructor is on approved leave on given date
   const isInstructorOnLeave = (instId: string, dateStr: string) => {
     return leaveRequests.some(
@@ -286,10 +323,177 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
     );
   };
 
+  // ---- Academic Catalog Manager (dynamic batches & rooms/labs) ----
+  const [catalogModalOpen, setCatalogModalOpen] = useState(false);
+  const [newBatchName, setNewBatchName] = useState('');
+  const [newRoomName, setNewRoomName] = useState('');
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [catalogBusy, setCatalogBusy] = useState(false);
+
+  useEffect(() => {
+    if (!catalogModalOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setCatalogModalOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [catalogModalOpen]);
+
+  const handleAddBatch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCatalogBusy(true);
+    setCatalogError(null);
+    const res = await addBatchAction(newBatchName, currentUser.id);
+    setCatalogBusy(false);
+    if (!res.success) {
+      setCatalogError(res.error || 'Failed to add batch');
+      return;
+    }
+    setNewBatchName('');
+    onRefresh();
+  };
+
+  const handleRemoveBatch = async (name: string) => {
+    setCatalogBusy(true);
+    setCatalogError(null);
+    const res = await removeBatchAction(name, currentUser.id);
+    setCatalogBusy(false);
+    if (!res.success) {
+      setCatalogError(res.error || 'Failed to remove batch');
+      return;
+    }
+    onRefresh();
+  };
+
+  const handleAddRoom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCatalogBusy(true);
+    setCatalogError(null);
+    const res = await addRoomAction(newRoomName, currentUser.id);
+    setCatalogBusy(false);
+    if (!res.success) {
+      setCatalogError(res.error || 'Failed to add room/lab');
+      return;
+    }
+    setNewRoomName('');
+    onRefresh();
+  };
+
+  const handleRemoveRoom = async (name: string) => {
+    setCatalogBusy(true);
+    setCatalogError(null);
+    const res = await removeRoomAction(name, currentUser.id);
+    setCatalogBusy(false);
+    if (!res.success) {
+      setCatalogError(res.error || 'Failed to remove room/lab');
+      return;
+    }
+    onRefresh();
+  };
+
+  // ---- WhatsApp Cadre Dispatcher ----
+  const [dispatchOpen, setDispatchOpen] = useState(false);
+  const [groupCopied, setGroupCopied] = useState(false);
+
+  useEffect(() => {
+    if (!dispatchOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDispatchOpen(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [dispatchOpen]);
+
+  // Converts a local Sri Lankan number ("071 257 0137") into WhatsApp's
+  // country-code-prefixed digit format ("94712570137").
+  const normalizePhoneForWhatsApp = (phone: string): string | null => {
+    const digits = phone.replace(/\D/g, '');
+    if (!digits) return null;
+    if (digits.startsWith('94')) return digits;
+    if (digits.startsWith('0')) return `94${digits.slice(1)}`;
+    return digits;
+  };
+
+  // Collects one instructor's duties/night-shifts for the visible week, grouped by day.
+  const getInstructorWeekEntries = (instId: string) => {
+    return weekDays
+      .map((day) => {
+        const items: string[] = dutyAssignments
+          .filter((a) => a.instructorId === instId && a.dutyDate === day.dateStr)
+          .sort((a, b) => a.startTime.localeCompare(b.startTime))
+          .map((a) => `${a.startTime}-${a.endTime} ${a.batchName} — ${a.moduleName}${a.roomLab ? ` (${a.roomLab})` : ''}`);
+
+        if (nightShifts.some((s) => s.instructorId === instId && s.shiftDate === day.dateStr)) {
+          items.push('🌙 Night Duty');
+        }
+        return { ...day, items };
+      })
+      .filter((d) => d.items.length > 0);
+  };
+
+  const buildIndividualMessage = (inst: User): string => {
+    const entries = getInstructorWeekEntries(inst.id);
+    const bodyLines =
+      entries.length === 0
+        ? ['No teaching duties or night shifts assigned this week.']
+        : entries.flatMap((d) => [`*${d.dayName}, ${d.formattedDate}*`, ...d.items.map((i) => `  • ${i}`)]);
+
+    return [
+      '📋 *NIBM Weekly Duty Roster*',
+      `Week: ${planningStartDate} → ${weekDays[6]?.dateStr}`,
+      '',
+      `Hi ${inst.fullName.split(' ')[0]}, here's your schedule for this week:`,
+      '',
+      ...bodyLines,
+      '',
+      '— NIBM School of Computing Roster System',
+    ].join('\n');
+  };
+
+  const buildGroupSummary = (): string => {
+    const lines: string[] = [
+      '📋 *NIBM FACULTY WEEKLY ROSTER*',
+      `Week: ${planningStartDate} → ${weekDays[6]?.dateStr}`,
+      `Status: ${rosterWeek.status}`,
+      '',
+    ];
+    allInstructors.forEach((inst) => {
+      const entries = getInstructorWeekEntries(inst.id);
+      lines.push(`*${inst.fullName}*`);
+      if (entries.length === 0) {
+        lines.push('  Free / Standby all week');
+      } else {
+        entries.forEach((d) => {
+          d.items.forEach((item) => lines.push(`  ${d.dayName} ${item}`));
+        });
+      }
+      lines.push('');
+    });
+    lines.push('Generated via NIBM Instructor Roster System');
+    return lines.join('\n');
+  };
+
+  const getWhatsAppLink = (inst: User): string | null => {
+    if (!inst.phone) return null;
+    const digits = normalizePhoneForWhatsApp(inst.phone);
+    if (!digits) return null;
+    return `https://wa.me/${digits}?text=${encodeURIComponent(buildIndividualMessage(inst))}`;
+  };
+
+  const handleCopyGroupSummary = async () => {
+    try {
+      await navigator.clipboard.writeText(buildGroupSummary());
+      setGroupCopied(true);
+      setTimeout(() => setGroupCopied(false), 2500);
+    } catch {
+      alert('Could not copy to clipboard. Please copy the summary manually.');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Banner: Planner Studio Header */}
-      <div className="bg-gradient-to-r from-slate-900 via-emerald-950 to-slate-900 rounded-2xl p-6 text-white border border-emerald-900/50 shadow-xl">
+      <div className="bg-slate-900 rounded-2xl p-6 text-white border border-slate-800">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
             <div className="flex items-center space-x-2 text-emerald-400 text-sm font-medium mb-1">
@@ -325,6 +529,22 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                 </span>
               </div>
             </div>
+
+            <button
+              onClick={() => setCatalogModalOpen(true)}
+              className="flex items-center space-x-1.5 text-xs font-bold px-4 py-2.5 rounded-lg shadow-md transition-all bg-slate-700 hover:bg-slate-600 text-white cursor-pointer active:scale-95"
+            >
+              <LibraryBig className="w-3.5 h-3.5" />
+              <span>Manage Catalog</span>
+            </button>
+
+            <button
+              onClick={() => setDispatchOpen(true)}
+              className="flex items-center space-x-1.5 text-xs font-bold px-4 py-2.5 rounded-lg shadow-md transition-all bg-[#25D366] hover:bg-[#20bd5a] text-slate-100 cursor-pointer active:scale-95"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span>Dispatch via WhatsApp</span>
+            </button>
 
             <button
               onClick={handlePublish}
@@ -421,15 +641,33 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
             <span>Next 7 Days</span>
             <ChevronRight className="w-3.5 h-3.5" />
           </button>
+
+          <button
+            type="button"
+            onClick={handleCloneWeek}
+            disabled={isCloning}
+            className="flex items-center space-x-1.5 text-xs bg-indigo-950/80 hover:bg-indigo-900 text-indigo-300 border border-indigo-800 px-3 py-1.5 rounded-lg font-bold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Import all assignments from the preceding week into this draft"
+          >
+            <CopyPlus className="w-3.5 h-3.5" />
+            <span>{isCloning ? 'Cloning...' : 'Clone Previous Week'}</span>
+          </button>
         </div>
       </div>
 
+      {cloneMessage && (
+        <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-xl text-indigo-400 text-xs flex items-center space-x-2">
+          <CopyPlus className="w-4 h-4 text-indigo-600 shrink-0" />
+          <span>{cloneMessage}</span>
+        </div>
+      )}
+
       {/* Workload Balancer Widget */}
-      <div className="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+      <div className="bg-slate-900 rounded-2xl p-5 border border-slate-800 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center space-x-2">
             <Layers className="w-4 h-4 text-emerald-600" />
-            <h3 className="font-bold text-slate-800 text-sm">
+            <h3 className="font-bold text-slate-200 text-sm">
               Workload Balancer (Cadre Allocation Meter)
             </h3>
           </div>
@@ -444,26 +682,26 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
             return (
               <div
                 key={inst.id}
-                className="bg-slate-50 rounded-xl p-2.5 border border-slate-200 text-center flex flex-col justify-between"
+                className="bg-slate-800/60 rounded-xl p-2.5 border border-slate-800 text-center flex flex-col justify-between"
               >
-                <div className="text-xs font-bold text-slate-800 truncate" title={inst.fullName}>
+                <div className="text-xs font-bold text-slate-200 truncate" title={inst.fullName}>
                   {inst.fullName.split(' ')[0]}
                 </div>
                 <div className="my-1.5 flex items-center justify-center space-x-2 text-xs">
-                  <span className="bg-indigo-100 text-indigo-800 font-bold px-1.5 py-0.5 rounded text-[11px]" title="Teaching Slots">
+                  <span className="bg-indigo-500/15 text-indigo-400 font-bold px-1.5 py-0.5 rounded text-[11px]" title="Teaching Slots">
                     {data.sessions} sess
                   </span>
-                  <span className="bg-amber-100 text-amber-900 font-bold px-1.5 py-0.5 rounded text-[11px]" title="Night Duty">
+                  <span className="bg-amber-500/15 text-amber-400 font-bold px-1.5 py-0.5 rounded text-[11px]" title="Night Duty">
                     {data.nightShifts} 🌙
                   </span>
                 </div>
-                <div className="text-[10px] text-slate-700">
+                <div className="text-[10px] text-slate-300">
                   Total: {data.sessions + data.nightShifts} duties
                 </div>
                 {inst.phone && (
                   <a
                     href={`tel:${inst.phone.replace(/\s+/g, '')}`}
-                    className="inline-flex items-center justify-center gap-1 text-[10px] text-emerald-700 hover:text-emerald-900 font-semibold mt-1 hover:underline cursor-pointer"
+                    className="inline-flex items-center justify-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-400 font-semibold mt-1 hover:underline cursor-pointer"
                     title={`Call ${inst.fullName}`}
                   >
                     <Phone className="w-2.5 h-2.5" />
@@ -477,11 +715,11 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
       </div>
 
       {/* The 7-Day Planning Matrix */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-800 bg-slate-800/60 flex items-center justify-between">
           <div className="flex items-center space-x-2">
             <Calendar className="w-4 h-4 text-emerald-600" />
-            <h3 className="font-bold text-slate-800 text-base">Weekly Schedule Matrix</h3>
+            <h3 className="font-bold text-slate-200 text-base">Weekly Schedule Matrix</h3>
             <span className="text-xs text-slate-500 font-medium">
               ({planningStartDate} to {weekDays[6]?.dateStr})
             </span>
@@ -503,7 +741,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
         </div>
 
         {/* Matrix Grid Columns */}
-        <div className="grid grid-cols-1 md:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-slate-200">
+        <div className="grid grid-cols-1 md:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-slate-800">
           {weekDays.map((day) => {
             const dayAssignments = dutyAssignments.filter((a) => a.dutyDate === day.dateStr);
             const nightShift = nightShifts.find((s) => s.shiftDate === day.dateStr);
@@ -512,15 +750,15 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
               <div
                 key={day.dateStr}
                 className={`flex flex-col min-h-[560px] ${
-                  day.isSunday ? 'bg-purple-50/25' : 'bg-white'
+                  day.isSunday ? 'bg-purple-500/10' : 'bg-slate-900'
                 }`}
               >
                 {/* Day Header */}
                 <div
                   className={`p-3 text-center border-b ${
                     day.isSunday
-                      ? 'bg-purple-100/60 border-purple-200 text-purple-950 font-bold'
-                      : 'bg-slate-100/60 border-slate-200 text-slate-800 font-bold'
+                      ? 'bg-purple-500/15 border-purple-500/20 text-purple-300 font-bold'
+                      : 'bg-slate-800/60 border-slate-800 text-slate-200 font-bold'
                   }`}
                 >
                   <div className="text-sm">{day.dayName}</div>
@@ -528,9 +766,9 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                 </div>
 
                 {/* Slot 1: Morning (09:00 - 12:00) */}
-                <div className="p-2 border-b border-slate-100 flex-1">
+                <div className="p-2 border-b border-slate-800 flex-1">
                   <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1">
-                    <span className="text-emerald-700">09:00 - 12:00</span>
+                    <span className="text-emerald-400">09:00 - 12:00</span>
                     <button
                       onClick={() =>
                         handleOpenAddModal(
@@ -540,7 +778,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                           '12:00'
                         )
                       }
-                      className="p-1 hover:bg-emerald-100 text-emerald-700 rounded transition-colors"
+                      className="p-1 hover:bg-emerald-500/15 text-emerald-400 rounded transition-colors"
                       title="Assign morning slot"
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -559,7 +797,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                         return (
                           <div
                             key={assignment.id}
-                            className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 text-xs relative group shadow-2xs flex flex-col justify-between"
+                            className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2.5 text-xs relative group shadow-2xs flex flex-col justify-between"
                           >
                             <div className="absolute top-1.5 right-1.5 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               {!hasAfternoon && (
@@ -573,7 +811,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                                       'Afternoon (13:00 - 16:00)'
                                     )
                                   }
-                                  className="p-1 text-emerald-700 hover:text-emerald-950 bg-emerald-100 hover:bg-emerald-200 rounded transition-colors"
+                                  className="p-1 text-emerald-400 hover:text-emerald-300 bg-emerald-500/15 hover:bg-emerald-500/25 rounded transition-colors"
                                   title="Copy session to Afternoon (13:00 - 16:00)"
                                 >
                                   <Copy className="w-3 h-3" />
@@ -582,7 +820,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleDeleteDuty(assignment.id)}
-                                className="p-1 text-slate-400 hover:text-rose-600 bg-white/80 hover:bg-rose-50 rounded transition-colors"
+                                className="p-1 text-slate-400 hover:text-rose-600 bg-slate-900/80 hover:bg-rose-500/10 rounded transition-colors"
                                 title="Remove assignment"
                               >
                                 <Trash2 className="w-3 h-3" />
@@ -590,13 +828,13 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                             </div>
 
                             <div>
-                              <div className="font-bold text-emerald-950 truncate pr-12">
+                              <div className="font-bold text-emerald-300 truncate pr-12">
                                 {assignment.instructorName}
                               </div>
-                              <div className="text-[11px] font-semibold text-emerald-800 truncate">
+                              <div className="text-[11px] font-semibold text-emerald-400 truncate">
                                 {assignment.batchName}
                               </div>
-                              <div className="text-[10px] text-slate-600 truncate">
+                              <div className="text-[10px] text-slate-400 truncate">
                                 {assignment.moduleName}
                               </div>
                               {assignment.roomLab && (
@@ -618,14 +856,14 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                                     'Afternoon (13:00 - 16:00)'
                                   )
                                 }
-                                className="mt-2 w-full flex items-center justify-center space-x-1 text-[10px] font-bold text-emerald-900 bg-emerald-100/90 hover:bg-emerald-200 border border-emerald-300/80 py-1 px-1.5 rounded-md transition-all shadow-2xs cursor-pointer active:scale-95"
+                                className="mt-2 w-full flex items-center justify-center space-x-1 text-[10px] font-bold text-emerald-400 bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/20 py-1 px-1.5 rounded-md transition-all shadow-2xs cursor-pointer active:scale-95"
                                 title="Copy this session to Afternoon (13:00 - 16:00)"
                               >
                                 <Copy className="w-3 h-3" />
                                 <span>Copy to Afternoon (1-4)</span>
                               </button>
                             ) : (
-                              <div className="mt-1.5 text-[9px] font-semibold text-emerald-700/80 flex items-center space-x-1">
+                              <div className="mt-1.5 text-[9px] font-semibold text-emerald-400/80 flex items-center space-x-1">
                                 <CheckCircle2 className="w-2.5 h-2.5" />
                                 <span>Also in Afternoon</span>
                               </div>
@@ -637,9 +875,9 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                 </div>
 
                 {/* Slot 2: Afternoon (13:00 - 16:00) */}
-                <div className="p-2 border-b border-slate-100 flex-1">
+                <div className="p-2 border-b border-slate-800 flex-1">
                   <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1">
-                    <span className="text-blue-700">13:00 - 16:00</span>
+                    <span className="text-blue-400">13:00 - 16:00</span>
                     <button
                       onClick={() =>
                         handleOpenAddModal(
@@ -649,7 +887,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                           '16:00'
                         )
                       }
-                      className="p-1 hover:bg-blue-100 text-blue-700 rounded transition-colors"
+                      className="p-1 hover:bg-blue-500/15 text-blue-400 rounded transition-colors"
                       title="Assign afternoon slot"
                     >
                       <Plus className="w-3.5 h-3.5" />
@@ -668,7 +906,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                         return (
                           <div
                             key={assignment.id}
-                            className="bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-xs relative group shadow-2xs flex flex-col justify-between"
+                            className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-2.5 text-xs relative group shadow-2xs flex flex-col justify-between"
                           >
                             <div className="absolute top-1.5 right-1.5 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                               {!hasMorning && (
@@ -682,7 +920,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                                       'Morning (09:00 - 12:00)'
                                     )
                                   }
-                                  className="p-1 text-blue-700 hover:text-blue-950 bg-blue-100 hover:bg-blue-200 rounded transition-colors"
+                                  className="p-1 text-blue-400 hover:text-blue-300 bg-blue-500/15 hover:bg-blue-500/25 rounded transition-colors"
                                   title="Copy session to Morning (09:00 - 12:00)"
                                 >
                                   <Copy className="w-3 h-3" />
@@ -691,7 +929,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                               <button
                                 type="button"
                                 onClick={() => handleDeleteDuty(assignment.id)}
-                                className="p-1 text-slate-400 hover:text-rose-600 bg-white/80 hover:bg-rose-50 rounded transition-colors"
+                                className="p-1 text-slate-400 hover:text-rose-600 bg-slate-900/80 hover:bg-rose-500/10 rounded transition-colors"
                                 title="Remove assignment"
                               >
                                 <Trash2 className="w-3 h-3" />
@@ -699,13 +937,13 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                             </div>
 
                             <div>
-                              <div className="font-bold text-blue-950 truncate pr-12">
+                              <div className="font-bold text-blue-300 truncate pr-12">
                                 {assignment.instructorName}
                               </div>
-                              <div className="text-[11px] font-semibold text-blue-800 truncate">
+                              <div className="text-[11px] font-semibold text-blue-400 truncate">
                                 {assignment.batchName}
                               </div>
-                              <div className="text-[10px] text-slate-600 truncate">
+                              <div className="text-[10px] text-slate-400 truncate">
                                 {assignment.moduleName}
                               </div>
                               {assignment.roomLab && (
@@ -727,14 +965,14 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                                     'Morning (09:00 - 12:00)'
                                   )
                                 }
-                                className="mt-2 w-full flex items-center justify-center space-x-1 text-[10px] font-bold text-blue-900 bg-blue-100/90 hover:bg-blue-200 border border-blue-300/80 py-1 px-1.5 rounded-md transition-all shadow-2xs cursor-pointer active:scale-95"
+                                className="mt-2 w-full flex items-center justify-center space-x-1 text-[10px] font-bold text-blue-400 bg-blue-500/15 hover:bg-blue-500/25 border border-blue-500/20 py-1 px-1.5 rounded-md transition-all shadow-2xs cursor-pointer active:scale-95"
                                 title="Copy this session to Morning (09:00 - 12:00)"
                               >
                                 <Copy className="w-3 h-3" />
                                 <span>Copy to Morning (9-12)</span>
                               </button>
                             ) : (
-                              <div className="mt-1.5 text-[9px] font-semibold text-blue-700/80 flex items-center space-x-1">
+                              <div className="mt-1.5 text-[9px] font-semibold text-blue-400/80 flex items-center space-x-1">
                                 <CheckCircle2 className="w-2.5 h-2.5" />
                                 <span>Also in Morning</span>
                               </div>
@@ -747,8 +985,8 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
 
                 {/* Special Sunday Evening Slot (16:30 - 17:30 CCS Batch) */}
                 {day.isSunday && (
-                  <div className="p-2 border-b border-purple-200 bg-purple-50/50">
-                    <div className="flex items-center justify-between text-[11px] font-bold text-purple-800 mb-1">
+                  <div className="p-2 border-b border-purple-500/20 bg-purple-500/10">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-purple-400 mb-1">
                       <span>CCS (16:30 - 17:30)</span>
                       <button
                         onClick={() =>
@@ -759,7 +997,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                             '17:30'
                           )
                         }
-                        className="p-1 hover:bg-purple-200 text-purple-800 rounded transition-colors"
+                        className="p-1 hover:bg-purple-500/25 text-purple-400 rounded transition-colors"
                         title="Assign Sunday CCS slot"
                       >
                         <Plus className="w-3.5 h-3.5" />
@@ -772,7 +1010,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                         .map((assignment) => (
                           <div
                             key={assignment.id}
-                            className="bg-purple-100/70 border border-purple-300 rounded-lg p-2 text-xs relative group shadow-2xs"
+                            className="bg-purple-500/15 border border-purple-500/20 rounded-lg p-2 text-xs relative group shadow-2xs"
                           >
                             <button
                               onClick={() => handleDeleteDuty(assignment.id)}
@@ -781,13 +1019,13 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                             >
                               <Trash2 className="w-3 h-3" />
                             </button>
-                            <div className="font-bold text-purple-950 truncate pr-3">
+                            <div className="font-bold text-purple-300 truncate pr-3">
                               {assignment.instructorName}
                             </div>
-                            <div className="text-[11px] font-semibold text-purple-800 truncate">
+                            <div className="text-[11px] font-semibold text-purple-400 truncate">
                               {assignment.batchName}
                             </div>
-                            <div className="text-[10px] text-slate-700 truncate">
+                            <div className="text-[10px] text-slate-300 truncate">
                               {assignment.moduleName}
                             </div>
                             {assignment.roomLab && (
@@ -840,24 +1078,24 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
       {/* Modal: Add Duty Assignment */}
       {modalOpen && modalData && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div className="bg-slate-900 rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-800 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div>
-                <h3 className="text-lg font-bold text-slate-900">Assign Teaching Duty</h3>
+                <h3 className="text-lg font-bold text-slate-100">Assign Teaching Duty</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
                   {modalData.date} • {modalData.slotLabel}
                 </p>
               </div>
               <button
                 onClick={() => setModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 text-lg font-bold"
+                className="text-slate-400 hover:text-slate-400 text-lg font-bold"
               >
                 ✕
               </button>
             </div>
 
             {formError && (
-              <div className="mt-4 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center space-x-2">
+              <div className="mt-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs flex items-center space-x-2">
                 <AlertTriangle className="w-4 h-4 shrink-0" />
                 <span>{formError}</span>
               </div>
@@ -866,13 +1104,13 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
             <form onSubmit={handleSaveDuty} className="mt-4 space-y-4">
               {/* Select Instructor */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                   Assigned Instructor (Cadre of 8)
                 </label>
                 <select
                   value={instructorId}
                   onChange={(e) => setInstructorId(e.target.value)}
-                  className="w-full text-sm border border-slate-300 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full text-sm border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   required
                 >
                   <option value="">Select Instructor...</option>
@@ -889,7 +1127,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
 
               {/* Free-form Batch Name + Quick Suggestion Tags */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                   Batch Code / Group
                 </label>
                 <input
@@ -897,16 +1135,16 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                   placeholder="e.g. DSE 24.1F or CCS Batch"
                   value={batchName}
                   onChange={(e) => setBatchName(e.target.value)}
-                  className="w-full text-sm border border-slate-300 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full text-sm border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   required
                 />
                 <div className="flex flex-wrap gap-1.5 mt-2">
-                  {COMMON_BATCHES.map((b) => (
+                  {catalog.batches.map((b) => (
                     <button
                       key={b}
                       type="button"
                       onClick={() => setBatchName(b)}
-                      className="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md transition-colors"
+                      className="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded-md transition-colors"
                     >
                       {b}
                     </button>
@@ -916,7 +1154,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
 
               {/* Free-form Module Name + Quick Suggestion Tags */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                   Module / Subject
                 </label>
                 <input
@@ -924,7 +1162,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                   placeholder="e.g. Database Management Systems"
                   value={moduleName}
                   onChange={(e) => setModuleName(e.target.value)}
-                  className="w-full text-sm border border-slate-300 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full text-sm border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   required
                 />
                 <div className="flex flex-wrap gap-1.5 mt-2">
@@ -933,7 +1171,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                       key={m}
                       type="button"
                       onClick={() => setModuleName(m)}
-                      className="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md transition-colors truncate max-w-[200px]"
+                      className="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded-md transition-colors truncate max-w-[200px]"
                     >
                       {m}
                     </button>
@@ -943,7 +1181,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
 
               {/* Room / Lab */}
               <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                   Room / Lab Venue
                 </label>
                 <input
@@ -951,15 +1189,15 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                   placeholder="e.g. Lab 01"
                   value={roomLab}
                   onChange={(e) => setRoomLab(e.target.value)}
-                  className="w-full text-sm border border-slate-300 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full text-sm border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                 />
                 <div className="flex flex-wrap gap-1.5 mt-2">
-                  {COMMON_ROOMS.map((r) => (
+                  {catalog.rooms.map((r) => (
                     <button
                       key={r}
                       type="button"
                       onClick={() => setRoomLab(r)}
-                      className="text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 px-2 py-0.5 rounded-md transition-colors"
+                      className="text-[11px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-2 py-0.5 rounded-md transition-colors"
                     >
                       {r}
                     </button>
@@ -969,7 +1207,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
 
               {/* Full Day / Duplicate Session Checkbox */}
               {modalData.startTime === '09:00' && (
-                <label className="flex items-start space-x-2.5 p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl cursor-pointer">
+                <label className="flex items-start space-x-2.5 p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl cursor-pointer">
                   <input
                     type="checkbox"
                     checked={repeatForOtherSlot}
@@ -977,10 +1215,10 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                     className="mt-0.5 rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4 cursor-pointer"
                   />
                   <div className="text-xs">
-                    <span className="font-bold text-emerald-950 block">
+                    <span className="font-bold text-emerald-300 block">
                       Also duplicate this session to Afternoon (13:00 - 16:00)
                     </span>
-                    <span className="text-emerald-700 text-[11px] block mt-0.5">
+                    <span className="text-emerald-400 text-[11px] block mt-0.5">
                       Automatically books a full-day workshop/lab session with the same instructor, batch, module, and lab.
                     </span>
                   </div>
@@ -988,7 +1226,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
               )}
 
               {modalData.startTime === '13:00' && (
-                <label className="flex items-start space-x-2.5 p-3 bg-blue-50/80 border border-blue-200 rounded-xl cursor-pointer">
+                <label className="flex items-start space-x-2.5 p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl cursor-pointer">
                   <input
                     type="checkbox"
                     checked={repeatForOtherSlot}
@@ -996,10 +1234,10 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                     className="mt-0.5 rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
                   />
                   <div className="text-xs">
-                    <span className="font-bold text-blue-950 block">
+                    <span className="font-bold text-blue-300 block">
                       Also duplicate this session to Morning (09:00 - 12:00)
                     </span>
-                    <span className="text-blue-700 text-[11px] block mt-0.5">
+                    <span className="text-blue-400 text-[11px] block mt-0.5">
                       Automatically books a full-day workshop/lab session with the same instructor, batch, module, and lab.
                     </span>
                   </div>
@@ -1007,11 +1245,11 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
               )}
 
               {/* Submit Buttons */}
-              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+              <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="text-xs font-bold text-slate-600 hover:bg-slate-100 px-4 py-2.5 rounded-xl transition-colors"
+                  className="text-xs font-bold text-slate-400 hover:bg-slate-800 px-4 py-2.5 rounded-xl transition-colors"
                 >
                   Cancel
                 </button>
@@ -1024,6 +1262,216 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp Cadre Dispatcher Drawer */}
+      {dispatchOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end bg-slate-900/60 backdrop-blur-xs">
+          <button
+            aria-label="Close dispatch drawer"
+            onClick={() => setDispatchOpen(false)}
+            className="absolute inset-0 cursor-default"
+          />
+          <div className="relative bg-slate-900 w-full max-w-md h-full shadow-2xl border-l border-slate-800 flex flex-col animate-in slide-in-from-right duration-200">
+            <div className="flex items-center justify-between p-5 border-b border-slate-800 bg-[#075E54] text-white">
+              <div>
+                <div className="flex items-center space-x-2 text-emerald-200 text-xs font-bold uppercase tracking-wider">
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Cadre Dispatcher</span>
+                </div>
+                <h3 className="text-lg font-bold">Dispatch via WhatsApp</h3>
+              </div>
+              <button
+                onClick={() => setDispatchOpen(false)}
+                className="text-emerald-100 hover:text-white transition-colors"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-5 border-b border-slate-800 bg-slate-800/60">
+              <p className="text-xs text-slate-500 mb-3">
+                Copy a single formatted summary of the entire week&apos;s roster for posting to the NIBM Faculty WhatsApp group.
+              </p>
+              <button
+                onClick={handleCopyGroupSummary}
+                className={`w-full flex items-center justify-center space-x-2 text-xs font-bold px-4 py-2.5 rounded-xl transition-colors cursor-pointer ${
+                  groupCopied
+                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                    : 'bg-slate-700 hover:bg-slate-600 text-white'
+                }`}
+              >
+                <ClipboardCopy className="w-3.5 h-3.5" />
+                <span>{groupCopied ? 'Copied to Clipboard!' : 'Copy Group Summary'}</span>
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto divide-y divide-slate-800">
+              {allInstructors.map((inst) => {
+                const link = getWhatsAppLink(inst);
+                const entries = getInstructorWeekEntries(inst.id);
+                const dutyCount = entries.reduce((sum, d) => sum + d.items.length, 0);
+                return (
+                  <div key={inst.id} className="p-4 flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-sm font-bold text-slate-100 truncate">{inst.fullName}</div>
+                      <div className="text-[11px] text-slate-500">
+                        {dutyCount > 0 ? `${dutyCount} dut${dutyCount === 1 ? 'y' : 'ies'} this week` : 'Free / Standby this week'}
+                      </div>
+                      {inst.phone && (
+                        <div className="text-[11px] text-slate-400">{inst.phone}</div>
+                      )}
+                    </div>
+                    {link ? (
+                      <a
+                        href={link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="shrink-0 flex items-center space-x-1.5 text-[11px] font-bold bg-[#25D366] hover:bg-[#20bd5a] text-slate-100 px-3 py-2 rounded-lg transition-colors cursor-pointer"
+                      >
+                        <MessageCircle className="w-3.5 h-3.5" />
+                        <span>Send</span>
+                      </a>
+                    ) : (
+                      <span className="shrink-0 text-[11px] text-slate-400 italic">No phone on file</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Academic Catalog Manager Modal */}
+      {catalogModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
+          <button
+            aria-label="Close catalog manager"
+            onClick={() => setCatalogModalOpen(false)}
+            className="absolute inset-0 cursor-default"
+          />
+          <div className="relative bg-slate-900 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 shadow-2xl border border-slate-800 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div>
+                <div className="flex items-center space-x-2 text-slate-500 text-xs font-bold uppercase tracking-wider">
+                  <LibraryBig className="w-3.5 h-3.5" />
+                  <span>Demonstrator Console</span>
+                </div>
+                <h3 className="text-lg font-bold text-slate-100">Academic Catalog Manager</h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Manage the student batches and lecture rooms/labs offered as quick-select presets when assigning duties.
+                </p>
+              </div>
+              <button
+                onClick={() => setCatalogModalOpen(false)}
+                className="text-slate-400 hover:text-slate-400 text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {catalogError && (
+              <div className="mt-4 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-400 text-xs flex items-center space-x-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{catalogError}</span>
+              </div>
+            )}
+
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Batches Section */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  Student Batches ({catalog.batches.length})
+                </h4>
+                <form onSubmit={handleAddBatch} className="flex gap-1.5 mb-3">
+                  <input
+                    type="text"
+                    value={newBatchName}
+                    onChange={(e) => setNewBatchName(e.target.value)}
+                    placeholder="e.g. DSE 24.2F"
+                    className="flex-1 text-sm border border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={catalogBusy || !newBatchName.trim()}
+                    className="text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </form>
+                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  {catalog.batches.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">No batches yet. Add one above.</p>
+                  ) : (
+                    catalog.batches.map((b) => (
+                      <div
+                        key={b}
+                        className="flex items-center justify-between bg-slate-800/60 border border-slate-800 rounded-lg px-2.5 py-1.5"
+                      >
+                        <span className="text-xs font-semibold text-slate-300">{b}</span>
+                        <button
+                          onClick={() => handleRemoveBatch(b)}
+                          disabled={catalogBusy}
+                          className="text-slate-400 hover:text-rose-600 disabled:opacity-50 cursor-pointer transition-colors"
+                          title={`Remove ${b}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* Rooms/Labs Section */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  Lecture Rooms / Labs ({catalog.rooms.length})
+                </h4>
+                <form onSubmit={handleAddRoom} className="flex gap-1.5 mb-3">
+                  <input
+                    type="text"
+                    value={newRoomName}
+                    onChange={(e) => setNewRoomName(e.target.value)}
+                    placeholder="e.g. Lab 05"
+                    className="flex-1 text-sm border border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={catalogBusy || !newRoomName.trim()}
+                    className="text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </form>
+                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  {catalog.rooms.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">No rooms/labs yet. Add one above.</p>
+                  ) : (
+                    catalog.rooms.map((r) => (
+                      <div
+                        key={r}
+                        className="flex items-center justify-between bg-slate-800/60 border border-slate-800 rounded-lg px-2.5 py-1.5"
+                      >
+                        <span className="text-xs font-semibold text-slate-300">{r}</span>
+                        <button
+                          onClick={() => handleRemoveRoom(r)}
+                          disabled={catalogBusy}
+                          className="text-slate-400 hover:text-rose-600 disabled:opacity-50 cursor-pointer transition-colors"
+                          title={`Remove ${r}`}
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

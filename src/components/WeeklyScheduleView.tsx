@@ -23,35 +23,33 @@ import {
 } from 'lucide-react';
 
 interface WeeklyScheduleViewProps {
-  currentUser: User;
   rosterWeek: RosterWeek;
   dutyAssignments: DutyAssignment[];
   nightShifts: NightShift[];
   leaveRequests: LeaveRequest[];
   allInstructors: User[];
-  onRefresh?: () => void;
   onWeekChange?: (newStartDate: string) => void;
   onSelectDateForCockpit?: (dateStr: string) => void;
 }
 
 export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
-  currentUser,
   rosterWeek,
   dutyAssignments,
   nightShifts,
   leaveRequests,
   allInstructors,
-  onRefresh,
   onWeekChange,
   onSelectDateForCockpit,
 }) => {
   const [planningStartDate, setPlanningStartDate] = useState<string>(rosterWeek.startDate);
+  const [prevRosterStartDate, setPrevRosterStartDate] = useState<string>(rosterWeek.startDate);
   const [selectedInstructorId, setSelectedInstructorId] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  React.useEffect(() => {
+  if (rosterWeek.startDate !== prevRosterStartDate) {
+    setPrevRosterStartDate(rosterWeek.startDate);
     setPlanningStartDate(rosterWeek.startDate);
-  }, [rosterWeek.startDate]);
+  }
 
   const handleDateChange = (newDateStr: string) => {
     setPlanningStartDate(newDateStr);
@@ -232,7 +230,7 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
   return (
     <div className="space-y-6">
       {/* Top Banner & Week Controller */}
-      <div className="bg-gradient-to-r from-slate-900 via-blue-950 to-indigo-950 rounded-2xl p-6 text-white border border-blue-900/50 shadow-xl print:hidden">
+      <div className="bg-slate-900 rounded-2xl p-6 text-white border border-slate-800 print:hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
             <div className="flex items-center space-x-2 text-blue-400 text-sm font-medium mb-1">
@@ -374,79 +372,79 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
       </div>
 
       {/* Printable Header (Visible only when printing) */}
-      <div className="hidden print:block mb-4 p-4 border-b border-slate-300">
-        <h1 className="text-xl font-black text-slate-900">National Institute of Business Management (NIBM)</h1>
-        <h2 className="text-base font-bold text-slate-700">School of Computing — Instructor Duty Roster</h2>
-        <p className="text-xs text-slate-600">
+      <div className="hidden print:block mb-4 p-4 border-b border-slate-700">
+        <h1 className="text-xl font-black text-slate-100">National Institute of Business Management (NIBM)</h1>
+        <h2 className="text-base font-bold text-slate-300">School of Computing — Instructor Duty Roster</h2>
+        <p className="text-xs text-slate-400">
           Week: {planningStartDate} to {weekEndDate} | Status: {rosterWeek.status} | Generated for Dr. Thisara
         </p>
       </div>
 
       {/* High-Level Weekly KPI Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 print:hidden">
-        <div className="bg-white rounded-xl p-4 border border-slate-200 shadow-sm">
+        <div className="bg-slate-900 rounded-xl p-4 border border-slate-800 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-slate-700 uppercase">Weekly Lectures</span>
+            <span className="text-xs font-semibold text-slate-300 uppercase">Weekly Lectures</span>
             <BookOpen className="w-4 h-4 text-blue-600" />
           </div>
           <div className="mt-2 flex items-baseline space-x-2">
-            <span className="text-2xl font-black text-slate-900">{totalWeeklySessions}</span>
-            <span className="text-xs text-slate-600">Sessions</span>
+            <span className="text-2xl font-black text-slate-100">{totalWeeklySessions}</span>
+            <span className="text-xs text-slate-400">Sessions</span>
           </div>
-          <p className="text-[11px] text-slate-600 mt-1">Across morning, afternoon & CCS</p>
+          <p className="text-[11px] text-slate-400 mt-1">Across morning, afternoon & CCS</p>
         </div>
 
-        <div className="bg-indigo-50/70 rounded-xl p-4 border border-indigo-200 shadow-sm">
+        <div className="bg-indigo-500/10 rounded-xl p-4 border border-indigo-500/20 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-indigo-700 uppercase">Night Coverage</span>
+            <span className="text-xs font-semibold text-indigo-400 uppercase">Night Coverage</span>
             <Moon className="w-4 h-4 text-indigo-600" />
           </div>
           <div className="mt-2 flex items-baseline space-x-2">
-            <span className="text-2xl font-black text-indigo-950">{totalWeeklyNightShifts}/7</span>
-            <span className="text-xs text-indigo-700">Nights</span>
+            <span className="text-2xl font-black text-indigo-300">{totalWeeklyNightShifts}/7</span>
+            <span className="text-xs text-indigo-400">Nights</span>
           </div>
-          <p className="text-[11px] text-indigo-700 mt-1">Designated overnight officers</p>
+          <p className="text-[11px] text-indigo-400 mt-1">Designated overnight officers</p>
         </div>
 
-        <div className="bg-rose-50/70 rounded-xl p-4 border border-rose-200 shadow-sm">
+        <div className="bg-rose-500/10 rounded-xl p-4 border border-rose-500/20 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-rose-700 uppercase">Cadre Absences</span>
+            <span className="text-xs font-semibold text-rose-400 uppercase">Cadre Absences</span>
             <AlertCircle className="w-4 h-4 text-rose-600" />
           </div>
           <div className="mt-2 flex items-baseline space-x-2">
-            <span className="text-2xl font-black text-rose-950">{totalWeeklyLeaves}</span>
+            <span className="text-2xl font-black text-rose-300">{totalWeeklyLeaves}</span>
             <span className="text-xs text-rose-600">Person-Days</span>
           </div>
           <p className="text-[11px] text-rose-600 mt-1">Approved holidays this week</p>
         </div>
 
-        <div className="bg-emerald-50/70 rounded-xl p-4 border border-emerald-200 shadow-sm">
+        <div className="bg-emerald-500/10 rounded-xl p-4 border border-emerald-500/20 shadow-sm">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-emerald-700 uppercase">Active Cadre</span>
+            <span className="text-xs font-semibold text-emerald-400 uppercase">Active Cadre</span>
             <Users className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="mt-2 flex items-baseline space-x-2">
-            <span className="text-2xl font-black text-emerald-950">{allInstructors.length}</span>
-            <span className="text-xs text-emerald-700">Instructors</span>
+            <span className="text-2xl font-black text-emerald-300">{allInstructors.length}</span>
+            <span className="text-xs text-emerald-400">Instructors</span>
           </div>
-          <p className="text-[11px] text-emerald-700 mt-1">Full team monitored</p>
+          <p className="text-[11px] text-emerald-400 mt-1">Full team monitored</p>
         </div>
       </div>
 
       {/* 7-Day Master Roster Matrix */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50">
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-800/60">
           <div>
-            <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+            <h3 className="font-bold text-slate-100 text-base flex items-center gap-2">
               <Calendar className="w-4 h-4 text-blue-600" />
               <span>7-Day Departmental Timetable Grid</span>
             </h3>
-            <p className="text-xs text-slate-700 mt-0.5">
+            <p className="text-xs text-slate-300 mt-0.5">
               Click &quot;Drilldown ↗&quot; on any date to inspect immediate standby free pools and live room assignments in the Daily Cockpit.
             </p>
           </div>
 
-          <div className="flex items-center gap-2 text-xs text-slate-700">
+          <div className="flex items-center gap-2 text-xs text-slate-300">
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded bg-blue-500"></span> Morning (09-12)
             </span>
@@ -460,7 +458,7 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
         </div>
 
         {/* 7-Column Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 divide-y lg:divide-y-0 lg:divide-x divide-slate-200 bg-slate-100">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 divide-y lg:divide-y-0 lg:divide-x divide-slate-800 bg-slate-800">
           {weekDays.map((day) => {
             // Find morning assignments for this day
             const morningDuties = filteredAssignments.filter(
@@ -489,24 +487,24 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
             return (
               <div
                 key={day.dateStr}
-                className={`bg-white flex flex-col min-h-[520px] ${
+                className={`bg-slate-900 flex flex-col min-h-[520px] ${
                   day.isToday ? 'ring-2 ring-blue-500 z-10' : ''
                 }`}
               >
                 {/* Column Header */}
                 <div
-                  className={`p-3 border-b border-slate-200 text-center ${
+                  className={`p-3 border-b border-slate-800 text-center ${
                     day.isToday
                       ? 'bg-blue-600 text-white'
                       : day.isSunday
-                      ? 'bg-purple-50 text-purple-950'
-                      : 'bg-slate-50 text-slate-800'
+                      ? 'bg-purple-500/10 text-purple-300'
+                      : 'bg-slate-800/60 text-slate-200'
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-black uppercase tracking-wider">{day.dayName}</span>
                     {day.isToday && (
-                      <span className="text-[9px] bg-white text-blue-700 font-bold px-1.5 py-0.2 rounded-full uppercase">
+                      <span className="text-[9px] bg-slate-900 text-blue-400 font-bold px-1.5 py-0.2 rounded-full uppercase">
                         Today
                       </span>
                     )}
@@ -520,7 +518,7 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                       className={`text-[10px] mt-1.5 font-semibold flex items-center justify-center space-x-1 w-full py-0.5 rounded transition-colors cursor-pointer print:hidden ${
                         day.isToday
                           ? 'bg-blue-700 hover:bg-blue-800 text-white'
-                          : 'bg-white hover:bg-slate-200 text-slate-700 border border-slate-200'
+                          : 'bg-slate-900 hover:bg-slate-700 text-slate-300 border border-slate-800'
                       }`}
                       title={`Open Dr. Thisara's Cockpit for ${day.dayName} ${day.formattedDate}`}
                     >
@@ -535,43 +533,43 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                   <div className="space-y-3">
                     {/* 1. MORNING SLOT (09:00 - 12:00) */}
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 uppercase tracking-wider px-1">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 uppercase tracking-wider px-1">
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3 text-blue-600" />
                           <span>09:00 - 12:00</span>
                         </span>
                         {morningDuties.length > 0 && (
-                          <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 px-1 rounded">
+                          <span className="text-[10px] font-semibold text-blue-400 bg-blue-500/10 px-1 rounded">
                             {morningDuties.length}
                           </span>
                         )}
                       </div>
 
                       {morningDuties.length === 0 ? (
-                        <div className="bg-slate-50/60 rounded-lg p-2 border border-dashed border-slate-200 text-center">
-                          <span className="text-[10px] text-slate-600 italic">No lectures</span>
+                        <div className="bg-slate-800/60 rounded-lg p-2 border border-dashed border-slate-800 text-center">
+                          <span className="text-[10px] text-slate-400 italic">No lectures</span>
                         </div>
                       ) : (
                         morningDuties.map((duty) => (
                           <div
                             key={duty.id}
-                            className="bg-blue-50/70 border border-blue-200 rounded-lg p-2 shadow-2xs hover:shadow-xs transition-shadow"
+                            className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-2 shadow-2xs hover:shadow-xs transition-shadow"
                           >
-                            <div className="text-xs font-bold text-blue-950 line-clamp-2 leading-snug">
+                            <div className="text-xs font-bold text-blue-300 line-clamp-2 leading-snug">
                               {duty.moduleName}
                             </div>
                             <div className="mt-1 flex items-center justify-between text-[11px]">
-                              <span className="bg-blue-200/80 text-blue-900 font-bold px-1.5 py-0.2 rounded text-[10px]">
+                              <span className="bg-blue-500/25 text-blue-400 font-bold px-1.5 py-0.2 rounded text-[10px]">
                                 {duty.batchName}
                               </span>
                               {duty.roomLab && (
-                                <span className="text-slate-600 font-medium text-[10px] flex items-center gap-0.5">
-                                  <MapPin className="w-2.5 h-2.5 text-slate-600" />
+                                <span className="text-slate-400 font-medium text-[10px] flex items-center gap-0.5">
+                                  <MapPin className="w-2.5 h-2.5 text-slate-400" />
                                   {duty.roomLab}
                                 </span>
                               )}
                             </div>
-                            <div className="mt-1.5 pt-1 border-t border-blue-100 flex items-center space-x-1 text-[11px] font-semibold text-slate-800">
+                            <div className="mt-1.5 pt-1 border-t border-blue-100 flex items-center space-x-1 text-[11px] font-semibold text-slate-200">
                               <div className="w-4 h-4 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[9px]">
                                 {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
                               </div>
@@ -584,43 +582,43 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
 
                     {/* 2. AFTERNOON SLOT (13:00 - 16:00) */}
                     <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-700 uppercase tracking-wider px-1">
+                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 uppercase tracking-wider px-1">
                         <span className="flex items-center gap-1">
                           <Clock className="w-3 h-3 text-amber-600" />
                           <span>13:00 - 16:00</span>
                         </span>
                         {afternoonDuties.length > 0 && (
-                          <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 px-1 rounded">
+                          <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-1 rounded">
                             {afternoonDuties.length}
                           </span>
                         )}
                       </div>
 
                       {afternoonDuties.length === 0 ? (
-                        <div className="bg-slate-50/60 rounded-lg p-2 border border-dashed border-slate-200 text-center">
-                          <span className="text-[10px] text-slate-600 italic">No lectures</span>
+                        <div className="bg-slate-800/60 rounded-lg p-2 border border-dashed border-slate-800 text-center">
+                          <span className="text-[10px] text-slate-400 italic">No lectures</span>
                         </div>
                       ) : (
                         afternoonDuties.map((duty) => (
                           <div
                             key={duty.id}
-                            className="bg-amber-50/70 border border-amber-200 rounded-lg p-2 shadow-2xs hover:shadow-xs transition-shadow"
+                            className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-2 shadow-2xs hover:shadow-xs transition-shadow"
                           >
-                            <div className="text-xs font-bold text-amber-950 line-clamp-2 leading-snug">
+                            <div className="text-xs font-bold text-amber-300 line-clamp-2 leading-snug">
                               {duty.moduleName}
                             </div>
                             <div className="mt-1 flex items-center justify-between text-[11px]">
-                              <span className="bg-amber-200/80 text-amber-900 font-bold px-1.5 py-0.2 rounded text-[10px]">
+                              <span className="bg-amber-500/25 text-amber-400 font-bold px-1.5 py-0.2 rounded text-[10px]">
                                 {duty.batchName}
                               </span>
                               {duty.roomLab && (
-                                <span className="text-slate-600 font-medium text-[10px] flex items-center gap-0.5">
-                                  <MapPin className="w-2.5 h-2.5 text-slate-600" />
+                                <span className="text-slate-400 font-medium text-[10px] flex items-center gap-0.5">
+                                  <MapPin className="w-2.5 h-2.5 text-slate-400" />
                                   {duty.roomLab}
                                 </span>
                               )}
                             </div>
-                            <div className="mt-1.5 pt-1 border-t border-amber-100 flex items-center space-x-1 text-[11px] font-semibold text-slate-800">
+                            <div className="mt-1.5 pt-1 border-t border-amber-100 flex items-center space-x-1 text-[11px] font-semibold text-slate-200">
                               <div className="w-4 h-4 rounded-full bg-amber-600 text-white font-bold flex items-center justify-center text-[9px]">
                                 {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
                               </div>
@@ -634,7 +632,7 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                     {/* 3. SUNDAY CCS SPECIAL SLOT (16:30 - 17:30) */}
                     {day.isSunday && (
                       <div className="space-y-1.5 pt-1">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-purple-800 uppercase tracking-wider px-1">
+                        <div className="flex items-center justify-between text-[11px] font-bold text-purple-400 uppercase tracking-wider px-1">
                           <span className="flex items-center gap-1">
                             <Sparkles className="w-3 h-3 text-purple-600" />
                             <span>Sunday CCS (16:30 - 17:30)</span>
@@ -642,29 +640,29 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                         </div>
 
                         {sundayDuties.length === 0 ? (
-                          <div className="bg-purple-50/50 rounded-lg p-2 border border-dashed border-purple-200 text-center">
-                            <span className="text-[10px] text-purple-700 italic">No CCS session</span>
+                          <div className="bg-purple-500/10 rounded-lg p-2 border border-dashed border-purple-500/20 text-center">
+                            <span className="text-[10px] text-purple-400 italic">No CCS session</span>
                           </div>
                         ) : (
                           sundayDuties.map((duty) => (
                             <div
                               key={duty.id}
-                              className="bg-purple-100/70 border border-purple-300 rounded-lg p-2 shadow-2xs"
+                              className="bg-purple-500/15 border border-purple-500/20 rounded-lg p-2 shadow-2xs"
                             >
-                              <div className="text-xs font-bold text-purple-950 leading-snug">
+                              <div className="text-xs font-bold text-purple-300 leading-snug">
                                 {duty.moduleName}
                               </div>
                               <div className="mt-1 flex items-center justify-between text-[11px]">
-                                <span className="bg-purple-200 text-purple-900 font-black px-1.5 py-0.2 rounded text-[10px]">
+                                <span className="bg-purple-500/25 text-purple-400 font-black px-1.5 py-0.2 rounded text-[10px]">
                                   {duty.batchName}
                                 </span>
                                 {duty.roomLab && (
-                                  <span className="text-slate-600 font-medium text-[10px]">
+                                  <span className="text-slate-400 font-medium text-[10px]">
                                     {duty.roomLab}
                                   </span>
                                 )}
                               </div>
-                              <div className="mt-1.5 pt-1 border-t border-purple-200 flex items-center space-x-1 text-[11px] font-semibold text-purple-950">
+                              <div className="mt-1.5 pt-1 border-t border-purple-500/20 flex items-center space-x-1 text-[11px] font-semibold text-purple-300">
                                 <div className="w-4 h-4 rounded-full bg-purple-700 text-white font-bold flex items-center justify-center text-[9px]">
                                   {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
                                 </div>
@@ -678,7 +676,7 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                   </div>
 
                   {/* BOTTOM SECTION: NIGHT SHIFT & LEAVES */}
-                  <div className="pt-2 border-t border-slate-200 space-y-2">
+                  <div className="pt-2 border-t border-slate-800 space-y-2">
                     {/* Night Shift Officer */}
                     <div className="bg-indigo-950 text-white rounded-lg p-2 text-xs">
                       <div className="flex items-center justify-between text-[10px] font-bold text-indigo-300 uppercase tracking-wider">
@@ -708,8 +706,8 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
 
                     {/* Approved Leaves On This Date */}
                     {dayLeaves.length > 0 && (
-                      <div className="bg-rose-50 border border-rose-200 rounded-lg p-1.5">
-                        <div className="text-[10px] font-bold text-rose-700 uppercase flex items-center gap-1">
+                      <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-1.5">
+                        <div className="text-[10px] font-bold text-rose-400 uppercase flex items-center gap-1">
                           <AlertCircle className="w-2.5 h-2.5 text-rose-600" />
                           <span>On Leave ({dayLeaves.length})</span>
                         </div>
@@ -717,7 +715,7 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                           {dayLeaves.map((l) => (
                             <div
                               key={l.id}
-                              className="text-[10px] font-medium text-rose-900 bg-rose-100/80 px-1 py-0.5 rounded truncate"
+                              className="text-[10px] font-medium text-rose-400 bg-rose-500/15 px-1 py-0.5 rounded truncate"
                               title={`${l.instructorName}: ${l.reason}`}
                             >
                               {l.instructorName}
@@ -735,25 +733,25 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
       </div>
 
       {/* Cadre Deployment & Workload Summary Table */}
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-100 flex items-center justify-between bg-slate-50">
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-800/60">
           <div>
-            <h3 className="font-bold text-slate-900 text-base flex items-center gap-2">
+            <h3 className="font-bold text-slate-100 text-base flex items-center gap-2">
               <Users className="w-4 h-4 text-blue-600" />
               <span>Instructor Cadre Weekly Workload & Deployment Table</span>
             </h3>
-            <p className="text-xs text-slate-700 mt-0.5">
+            <p className="text-xs text-slate-300 mt-0.5">
               Comprehensive distribution of teaching hours and night shifts for all 8 team members across this 7-day period.
             </p>
           </div>
-          <span className="text-xs font-bold text-slate-700 bg-slate-200 px-2.5 py-1 rounded-full">
+          <span className="text-xs font-bold text-slate-300 bg-slate-700 px-2.5 py-1 rounded-full">
             {allInstructors.length} Instructors Monitored
           </span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-700">
-            <thead className="bg-slate-100/80 text-slate-700 font-bold border-b border-slate-200 uppercase text-[10px] tracking-wider">
+          <table className="w-full text-left text-xs text-slate-300">
+            <thead className="bg-slate-800/80 text-slate-300 font-bold border-b border-slate-800 uppercase text-[10px] tracking-wider">
               <tr>
                 <th className="px-4 py-3">Instructor</th>
                 <th className="px-3 py-3 text-center">Morning (09-12)</th>
@@ -766,31 +764,31 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                 <th className="px-4 py-3 text-center">Workload Balance</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-slate-800">
               {instructorStats.map((item) => {
                 const isSelected = selectedInstructorId === item.instructor.id;
                 const totalHours = item.totalHours;
 
                 let balanceBadge = (
-                  <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  <span className="bg-emerald-500/15 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
                     Balanced
                   </span>
                 );
                 if (item.onLeaveDates.length >= 3) {
                   balanceBadge = (
-                    <span className="bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <span className="bg-rose-500/15 text-rose-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
                       On Leave
                     </span>
                   );
                 } else if (item.totalSessions >= 5) {
                   balanceBadge = (
-                    <span className="bg-purple-100 text-purple-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <span className="bg-purple-500/15 text-purple-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
                       Heavy Load
                     </span>
                   );
                 } else if (item.totalSessions === 0 && item.onLeaveDates.length === 0) {
                   balanceBadge = (
-                    <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <span className="bg-amber-500/15 text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
                       Standby / Free
                     </span>
                   );
@@ -799,28 +797,28 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                 return (
                   <tr
                     key={item.instructor.id}
-                    className={`hover:bg-slate-50/80 transition-colors ${
-                      isSelected ? 'bg-blue-50/50 font-semibold' : ''
+                    className={`hover:bg-slate-800/80 transition-colors ${
+                      isSelected ? 'bg-blue-500/10 font-semibold' : ''
                     }`}
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center space-x-2.5">
-                        <div className="w-7 h-7 rounded-full bg-slate-200 text-slate-800 font-black flex items-center justify-center text-[10px]">
+                        <div className="w-7 h-7 rounded-full bg-slate-700 text-slate-200 font-black flex items-center justify-center text-[10px]">
                           {item.instructor.fullName.substring(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <div className="font-bold text-slate-900">{item.instructor.fullName}</div>
+                          <div className="font-bold text-slate-100">{item.instructor.fullName}</div>
                           {item.instructor.phone ? (
                             <a
                               href={`tel:${item.instructor.phone.replace(/\s+/g, '')}`}
-                              className="inline-flex items-center gap-1 text-[10px] text-emerald-700 hover:text-emerald-900 font-semibold hover:underline"
+                              className="inline-flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-400 font-semibold hover:underline"
                               title={`Call ${item.instructor.fullName}`}
                             >
                               <Phone className="w-2.5 h-2.5 text-emerald-600" />
                               <span>{item.instructor.phone}</span>
                             </a>
                           ) : (
-                            <div className="text-[10px] text-slate-600">{item.instructor.email}</div>
+                            <div className="text-[10px] text-slate-400">{item.instructor.email}</div>
                           )}
                         </div>
                       </div>
@@ -829,34 +827,34 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                     <td className="px-3 py-3 text-center font-medium">{item.afternoonCount}</td>
                     <td className="px-3 py-3 text-center font-medium">
                       {item.sundayCount > 0 ? (
-                        <span className="text-purple-700 font-bold">{item.sundayCount}</span>
+                        <span className="text-purple-400 font-bold">{item.sundayCount}</span>
                       ) : (
                         '-'
                       )}
                     </td>
                     <td className="px-3 py-3 text-center">
-                      <span className="font-black text-slate-900 text-sm">{item.totalSessions}</span>
+                      <span className="font-black text-slate-100 text-sm">{item.totalSessions}</span>
                     </td>
-                    <td className="px-3 py-3 text-center font-semibold text-slate-800">
+                    <td className="px-3 py-3 text-center font-semibold text-slate-200">
                       {totalHours} hrs
                     </td>
                     <td className="px-4 py-3 text-center">
                       {item.nightShiftsCount > 0 ? (
-                        <span className="inline-flex items-center gap-1 bg-indigo-100 text-indigo-900 font-bold px-2 py-0.5 rounded text-[11px]">
+                        <span className="inline-flex items-center gap-1 bg-indigo-500/15 text-indigo-400 font-bold px-2 py-0.5 rounded text-[11px]">
                           <Moon className="w-3 h-3 text-amber-500" />
                           <span>{item.nightShiftsCount} Night{item.nightShiftsCount > 1 ? 's' : ''}</span>
                         </span>
                       ) : (
-                        <span className="text-slate-600 text-[11px]">None</span>
+                        <span className="text-slate-400 text-[11px]">None</span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-center">
                       {item.onLeaveDates.length > 0 ? (
-                        <span className="bg-rose-100 text-rose-800 font-semibold px-2 py-0.5 rounded text-[10px]">
+                        <span className="bg-rose-500/15 text-rose-400 font-semibold px-2 py-0.5 rounded text-[10px]">
                           {item.onLeaveDates.length} day{item.onLeaveDates.length > 1 ? 's' : ''} away
                         </span>
                       ) : (
-                        <span className="text-emerald-700 font-semibold text-[11px] flex items-center justify-center gap-0.5">
+                        <span className="text-emerald-400 font-semibold text-[11px] flex items-center justify-center gap-0.5">
                           <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Available
                         </span>
                       )}

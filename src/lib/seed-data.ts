@@ -1,6 +1,11 @@
 import { User, RosterWeek, DutyAssignment, NightShift, LeaveRequest, DaySlotTemplate } from '@/types';
 
-export const INITIAL_USERS: User[] = [
+// Shared bcrypt hash (cost 10) of the local-dev/demo-only password "demo1234".
+// Only ever used for these seeded fixtures -- accounts created through the
+// admin onboarding flow always get their own randomly generated temp password.
+const DEMO_PASSWORD_HASH = '$2b$10$e6g.pKmp4nQvISZX5pp6je0uPtlgSRiRSKnNkCRnTC9Lk1U5Z.VJS';
+
+export const INITIAL_USERS: (User & { passwordHash: string })[] = [
   {
     id: 'user-yasith',
     fullName: 'Yasith',
@@ -9,6 +14,7 @@ export const INITIAL_USERS: User[] = [
     phone: '071 257 0137',
     avatarColor: 'bg-emerald-600',
     isActive: true,
+    passwordHash: DEMO_PASSWORD_HASH,
   },
   {
     id: 'user-thisara',
@@ -18,6 +24,7 @@ export const INITIAL_USERS: User[] = [
     phone: '071 987 6543',
     avatarColor: 'bg-blue-700',
     isActive: true,
+    passwordHash: DEMO_PASSWORD_HASH,
   },
   {
     id: 'general-instructor',
@@ -27,6 +34,7 @@ export const INITIAL_USERS: User[] = [
     phone: '011 268 5697',
     avatarColor: 'bg-purple-600',
     isActive: true,
+    passwordHash: DEMO_PASSWORD_HASH,
   },
   {
     id: 'inst-1',
@@ -36,6 +44,7 @@ export const INITIAL_USERS: User[] = [
     phone: '074 015 0405',
     avatarColor: 'bg-indigo-600',
     isActive: true,
+    passwordHash: DEMO_PASSWORD_HASH,
   },
   {
     id: 'inst-2',
@@ -45,6 +54,7 @@ export const INITIAL_USERS: User[] = [
     phone: '071 217 9220',
     avatarColor: 'bg-purple-600',
     isActive: true,
+    passwordHash: DEMO_PASSWORD_HASH,
   },
   {
     id: 'inst-3',
@@ -54,6 +64,7 @@ export const INITIAL_USERS: User[] = [
     phone: '077 116 4048',
     avatarColor: 'bg-pink-600',
     isActive: true,
+    passwordHash: DEMO_PASSWORD_HASH,
   },
   {
     id: 'inst-4',
@@ -63,6 +74,7 @@ export const INITIAL_USERS: User[] = [
     phone: '076 783 3449',
     avatarColor: 'bg-amber-600',
     isActive: true,
+    passwordHash: DEMO_PASSWORD_HASH,
   },
   {
     id: 'inst-5',
@@ -72,6 +84,7 @@ export const INITIAL_USERS: User[] = [
     phone: '071 305 5035',
     avatarColor: 'bg-teal-600',
     isActive: true,
+    passwordHash: DEMO_PASSWORD_HASH,
   },
   {
     id: 'inst-6',
@@ -81,6 +94,7 @@ export const INITIAL_USERS: User[] = [
     phone: '071 553 6337',
     avatarColor: 'bg-cyan-600',
     isActive: true,
+    passwordHash: DEMO_PASSWORD_HASH,
   },
   {
     id: 'inst-7',
@@ -90,8 +104,12 @@ export const INITIAL_USERS: User[] = [
     phone: '075 792 2488',
     avatarColor: 'bg-orange-600',
     isActive: true,
+    passwordHash: DEMO_PASSWORD_HASH,
   },
 ];
+
+export const INITIAL_BATCHES: string[] = ['DSE 24.1F', 'DCSD 24.1P', 'HDCN 23.2', 'CCS Batch', 'MIS 24.1', 'CSNE 23.1'];
+export const INITIAL_ROOMS: string[] = ['Lab 01', 'Lab 02', 'Lab 03', 'Lab 04', 'CISCO Lab', 'Main Auditorium Hall'];
 
 export const DEFAULT_SLOT_TEMPLATES: DaySlotTemplate[] = [
   {
