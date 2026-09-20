@@ -1,0 +1,51 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Code Quality & Build Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Next.js Production Build
+        run: npm run build
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql://mock:mock@localhost:5432/mock?sslmode=require' }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED || secrets.DATABASE_URL || 'postgresql://mock:mock@localhost:5432/mock?sslmode=require' }}
+          SESSION_SECRET: ${{ secrets.SESSION_SECRET || secrets.JWT_SECRET || 'ci-dummy-session-secret-key-32-characters-long!!' }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-dummy-jwt-secret-key-32-characters-long!!' }}
+          NODE_ENV: production
+
+      - name: Run Domain & Integrity Tests
+        if: env.DATABASE_URL != 'postgresql://mock:mock@localhost:5432/mock?sslmode=require'
+        run: npm test
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-dummy-jwt-secret-key-32-characters-long!!' }}
