@@ -43,9 +43,23 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-dummy-jwt-secret-key-32-characters-long!!' }}
           NODE_ENV: production
 
+      - name: Check for test database secret
+        id: test_db
+        run: |
+          if [ -n "${{ secrets.TEST_DATABASE_URL }}" ]; then
+            echo "available=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "available=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The domain suite (scripts/verify-domain-rules.ts) asserts against a
+      # real Neon branch via TEST_DATABASE_URL/TEST_DATABASE_URL_UNPOOLED --
+      # it has no mock mode, and `npm test`'s local --env-file=.env flag
+      # can't work here since .env is gitignored and never checked out.
+      # Skip cleanly instead of failing when no test-branch secret is set.
       - name: Run Domain & Integrity Tests
-        if: env.DATABASE_URL != 'postgresql://mock:mock@localhost:5432/mock?sslmode=require'
-        run: npm test
+        if: steps.test_db.outputs.available == 'true'
+        run: npx tsx scripts/verify-domain-rules.ts
         env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET || 'ci-dummy-jwt-secret-key-32-characters-long!!' }}
+          TEST_DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+          TEST_DATABASE_URL_UNPOOLED: ${{ secrets.TEST_DATABASE_URL_UNPOOLED }}
