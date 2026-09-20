@@ -1,7 +1,7 @@
 // Seeds the 8-member instructor cadre + kiosk/executive accounts, the
 // current roster week, and the default academic catalog into whichever
 // database DATABASE_URL currently points at. Idempotent (safe to re-run) --
-// upserts by email, so it never duplicates fixtures.
+// upserts by username, so it never duplicates fixtures.
 //
 // This is dev/test fixture data, not something to run against a real
 // production database: production should start with only the env-seeded
@@ -14,11 +14,12 @@ const prisma = new PrismaClient();
 async function main() {
   for (const u of INITIAL_USERS) {
     await prisma.user.upsert({
-      where: { email: u.email },
+      where: { username: u.username },
       update: {},
       create: {
         id: u.id,
         fullName: u.fullName,
+        username: u.username,
         email: u.email,
         role: u.role,
         phone: u.phone,

@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "NIBM Instructor Roster & Task Allocation System",
-  description: "Enterprise Academic Duty Management and Live Roster System for NIBM Instructors",
+  title: "SLATE | NIBM Instructor Roster & Task Allocation",
+  description:
+    "SLATE (Scheduling & Leave Allocation Tracking Engine) -- enterprise academic duty management and live roster system for NIBM instructors.",
 };
 
 export default function RootLayout({

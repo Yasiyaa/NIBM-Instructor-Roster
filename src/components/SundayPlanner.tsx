@@ -28,6 +28,8 @@ import {
   X,
   CopyPlus,
   LibraryBig,
+  Pencil,
+  Check,
 } from 'lucide-react';
 import {
   addDutyAction,
@@ -37,12 +39,17 @@ import {
   cloneWeekAction,
   addBatchAction,
   removeBatchAction,
+  updateBatchAction,
   addRoomAction,
   removeRoomAction,
+  updateRoomAction,
+  addModuleAction,
+  removeModuleAction,
+  updateModuleAction,
 } from '@/lib/actions';
+import { useDialog } from './DialogProvider';
 
 interface SundayPlannerProps {
-  currentUser: User;
   rosterWeek: RosterWeek;
   dutyAssignments: DutyAssignment[];
   nightShifts: NightShift[];
@@ -53,19 +60,7 @@ interface SundayPlannerProps {
   onWeekChange?: (newStartDate: string) => void;
 }
 
-const COMMON_MODULES = [
-  'Database Management Systems',
-  'Object-Oriented Programming (Java)',
-  'Data Structures & Algorithms',
-  'Computer Networks & Routing',
-  'Cyber Security Operations',
-  'Web Application Development',
-  'Cloud Computing Essentials',
-  'Python for Data Science',
-];
-
 export const SundayPlanner: React.FC<SundayPlannerProps> = ({
-  currentUser,
   rosterWeek,
   dutyAssignments,
   nightShifts,
@@ -75,6 +70,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
   onRefresh,
   onWeekChange,
 }) => {
+  const { confirm, notify } = useDialog();
   const [modalOpen, setModalOpen] = useState(false);
   const [modalData, setModalData] = useState<{
     date: string;
@@ -188,11 +184,11 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
       batchName: assignment.batchName,
       moduleName: assignment.moduleName,
       roomLab: assignment.roomLab,
-    }, currentUser.id);
+    });
     setIsSubmitting(false);
 
     if (!res.success) {
-      alert(res.error || 'Failed to copy session');
+      await notify(res.error || 'Failed to copy session');
     } else {
       onRefresh();
     }
@@ -228,7 +224,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
       batchName: batchName.trim(),
       moduleName: moduleName.trim(),
       roomLab: roomLab.trim(),
-    }, currentUser.id);
+    });
 
     if (!res.success) {
       setIsSubmitting(false);
@@ -253,7 +249,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
         batchName: batchName.trim(),
         moduleName: moduleName.trim(),
         roomLab: roomLab.trim(),
-      }, currentUser.id);
+      });
     }
 
     setIsSubmitting(false);
@@ -263,8 +259,8 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
 
   // Remove duty slot
   const handleDeleteDuty = async (id: string) => {
-    if (confirm('Remove this duty allocation?')) {
-      await deleteDutyAction(id, currentUser.id);
+    if (await confirm({ message: 'Remove this duty allocation?', confirmLabel: 'Remove', danger: true })) {
+      await deleteDutyAction(id);
       onRefresh();
     }
   };
@@ -272,9 +268,9 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
   // Set night shift instructor
   const handleSetNightShift = async (shiftDate: string, newInstructorId: string) => {
     if (!newInstructorId) return;
-    const res = await setNightShiftAction(rosterWeek.id, shiftDate, newInstructorId, currentUser.id);
+    const res = await setNightShiftAction(rosterWeek.id, shiftDate, newInstructorId);
     if (!res.success) {
-      alert(res.error);
+      await notify(res.error || 'Failed to set night duty.');
     } else {
       onRefresh();
     }
@@ -282,8 +278,13 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
 
   // Publish roster
   const handlePublish = async () => {
-    if (confirm('Publish this weekly roster? All instructors and Dr. Thisara will see the finalized schedule.')) {
-      await publishRosterAction(rosterWeek.id, currentUser.id);
+    const proceed = await confirm({
+      title: 'Publish roster',
+      message: 'Publish this weekly roster? All instructors and Dr. Thisara will see the finalized schedule.',
+      confirmLabel: 'Publish',
+    });
+    if (proceed) {
+      await publishRosterAction(rosterWeek.id);
       setPublishMessage('Roster published successfully!');
       setTimeout(() => setPublishMessage(null), 4000);
       onRefresh();
@@ -292,17 +293,18 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
 
   // Clone the preceding 7 days' assignments and night shifts into this week's draft
   const handleCloneWeek = async () => {
-    if (
-      !confirm(
-        `Clone last week's duties and night shifts into the week starting ${planningStartDate}? Collisions and approved-leave conflicts will be skipped automatically.`
-      )
-    ) {
+    const proceed = await confirm({
+      title: 'Clone previous week',
+      message: `Clone last week's duties and night shifts into the week starting ${planningStartDate}? Collisions and approved-leave conflicts will be skipped automatically.`,
+      confirmLabel: 'Clone',
+    });
+    if (!proceed) {
       return;
     }
     setIsCloning(true);
     setCloneMessage(null);
     try {
-      const result = await cloneWeekAction(planningStartDate, currentUser.id);
+      const result = await cloneWeekAction(planningStartDate);
       const skippedCount = result.skippedDuties.length + result.skippedNightShifts.length;
       setCloneMessage(
         `Cloned ${result.clonedDuties} duty session${result.clonedDuties === 1 ? '' : 's'} and ${result.clonedNightShifts} night shift${
@@ -327,6 +329,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
   const [catalogModalOpen, setCatalogModalOpen] = useState(false);
   const [newBatchName, setNewBatchName] = useState('');
   const [newRoomName, setNewRoomName] = useState('');
+  const [newModuleName, setNewModuleName] = useState('');
   const [catalogError, setCatalogError] = useState<string | null>(null);
   const [catalogBusy, setCatalogBusy] = useState(false);
 
@@ -343,7 +346,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
     e.preventDefault();
     setCatalogBusy(true);
     setCatalogError(null);
-    const res = await addBatchAction(newBatchName, currentUser.id);
+    const res = await addBatchAction(newBatchName);
     setCatalogBusy(false);
     if (!res.success) {
       setCatalogError(res.error || 'Failed to add batch');
@@ -356,7 +359,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
   const handleRemoveBatch = async (name: string) => {
     setCatalogBusy(true);
     setCatalogError(null);
-    const res = await removeBatchAction(name, currentUser.id);
+    const res = await removeBatchAction(name);
     setCatalogBusy(false);
     if (!res.success) {
       setCatalogError(res.error || 'Failed to remove batch');
@@ -369,7 +372,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
     e.preventDefault();
     setCatalogBusy(true);
     setCatalogError(null);
-    const res = await addRoomAction(newRoomName, currentUser.id);
+    const res = await addRoomAction(newRoomName);
     setCatalogBusy(false);
     if (!res.success) {
       setCatalogError(res.error || 'Failed to add room/lab');
@@ -382,12 +385,98 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
   const handleRemoveRoom = async (name: string) => {
     setCatalogBusy(true);
     setCatalogError(null);
-    const res = await removeRoomAction(name, currentUser.id);
+    const res = await removeRoomAction(name);
     setCatalogBusy(false);
     if (!res.success) {
       setCatalogError(res.error || 'Failed to remove room/lab');
       return;
     }
+    onRefresh();
+  };
+
+  const handleAddModule = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCatalogBusy(true);
+    setCatalogError(null);
+    const res = await addModuleAction(newModuleName);
+    setCatalogBusy(false);
+    if (!res.success) {
+      setCatalogError(res.error || 'Failed to add module');
+      return;
+    }
+    setNewModuleName('');
+    onRefresh();
+  };
+
+  const handleRemoveModule = async (name: string) => {
+    setCatalogBusy(true);
+    setCatalogError(null);
+    const res = await removeModuleAction(name);
+    setCatalogBusy(false);
+    if (!res.success) {
+      setCatalogError(res.error || 'Failed to remove module');
+      return;
+    }
+    onRefresh();
+  };
+
+  // Inline "save to list" from the Assign Teaching Duty form itself -- lets
+  // a demonstrator type a one-off module/room and permanently add it to the
+  // catalog without leaving the form to open the separate manager.
+  const handleSaveModuleInline = async () => {
+    setCatalogBusy(true);
+    const res = await addModuleAction(moduleName);
+    setCatalogBusy(false);
+    if (res.success) onRefresh();
+    else await notify(res.error || 'Failed to save module to the catalog.');
+  };
+
+  const handleSaveRoomInline = async () => {
+    setCatalogBusy(true);
+    const res = await addRoomAction(roomLab);
+    setCatalogBusy(false);
+    if (res.success) onRefresh();
+    else await notify(res.error || 'Failed to save room/lab to the catalog.');
+  };
+
+  // Inline rename for an existing catalog entry (batch/room/module) --
+  // one shared bit of state since it's the same edit-in-place flow for all
+  // three lists, just dispatched to a different action per kind.
+  const [editingCatalogItem, setEditingCatalogItem] = useState<{
+    kind: 'batch' | 'room' | 'module';
+    original: string;
+  } | null>(null);
+  const [editCatalogValue, setEditCatalogValue] = useState('');
+
+  const handleStartEditCatalogItem = (kind: 'batch' | 'room' | 'module', name: string) => {
+    setEditingCatalogItem({ kind, original: name });
+    setEditCatalogValue(name);
+    setCatalogError(null);
+  };
+
+  const handleCancelEditCatalogItem = () => {
+    setEditingCatalogItem(null);
+    setEditCatalogValue('');
+  };
+
+  const handleSaveEditCatalogItem = async () => {
+    if (!editingCatalogItem) return;
+    const { kind, original } = editingCatalogItem;
+    setCatalogBusy(true);
+    setCatalogError(null);
+    const res =
+      kind === 'batch'
+        ? await updateBatchAction(original, editCatalogValue)
+        : kind === 'room'
+          ? await updateRoomAction(original, editCatalogValue)
+          : await updateModuleAction(original, editCatalogValue);
+    setCatalogBusy(false);
+    if (!res.success) {
+      setCatalogError(res.error || 'Failed to update entry.');
+      return;
+    }
+    setEditingCatalogItem(null);
+    setEditCatalogValue('');
     onRefresh();
   };
 
@@ -486,7 +575,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
       setGroupCopied(true);
       setTimeout(() => setGroupCopied(false), 2500);
     } catch {
-      alert('Could not copy to clipboard. Please copy the summary manually.');
+      await notify('Could not copy to clipboard. Please copy the summary manually.');
     }
   };
 
@@ -503,13 +592,10 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
             <h2 className="text-2xl font-black tracking-tight text-white">
               Weekly Task & Duty Allocator
             </h2>
-            <p className="text-slate-300 text-sm mt-1 max-w-2xl">
-              Plan the week ahead for all 8 team members. Assign batches, modules, labs, and the 7-day night duties. Real-time conflict engine prevents double-booking and blocks allocations on approved leave dates.
-            </p>
           </div>
 
           {/* Roster Status & Action */}
-          <div className="flex items-center gap-3 bg-slate-800/80 p-3 rounded-xl border border-slate-700">
+          <div className="flex items-center flex-wrap gap-3 bg-slate-800/80 p-3 rounded-xl border border-slate-700">
             <div className="text-right mr-2">
               <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
                 Roster State
@@ -1110,7 +1196,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                 <select
                   value={instructorId}
                   onChange={(e) => setInstructorId(e.target.value)}
-                  className="w-full text-sm border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="w-full text-sm bg-slate-900 border border-slate-700 text-slate-100 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                   required
                 >
                   <option value="">Select Instructor...</option>
@@ -1152,21 +1238,42 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                 </div>
               </div>
 
-              {/* Free-form Module Name + Quick Suggestion Tags */}
+              {/* Module: pick from the catalog, type a custom one, or save a new one */}
               <div>
                 <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                   Module / Subject
                 </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Database Management Systems"
-                  value={moduleName}
-                  onChange={(e) => setModuleName(e.target.value)}
-                  className="w-full text-sm border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  required
-                />
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    list="module-catalog-options"
+                    placeholder="e.g. Database Management Systems"
+                    value={moduleName}
+                    onChange={(e) => setModuleName(e.target.value)}
+                    className="flex-1 min-w-0 text-sm bg-slate-900 border border-slate-700 text-slate-100 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    required
+                  />
+                  {moduleName.trim() &&
+                    !catalog.modules.some((m) => m.toLowerCase() === moduleName.trim().toLowerCase()) && (
+                      <button
+                        type="button"
+                        onClick={handleSaveModuleInline}
+                        disabled={catalogBusy}
+                        title="Save this module to the catalog permanently"
+                        className="shrink-0 flex items-center gap-1 text-[11px] font-bold bg-slate-800 hover:bg-emerald-600 disabled:opacity-50 text-slate-300 hover:text-white px-2.5 rounded-xl transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Save</span>
+                      </button>
+                    )}
+                </div>
+                <datalist id="module-catalog-options">
+                  {catalog.modules.map((m) => (
+                    <option key={m} value={m} />
+                  ))}
+                </datalist>
                 <div className="flex flex-wrap gap-1.5 mt-2">
-                  {COMMON_MODULES.slice(0, 4).map((m) => (
+                  {catalog.modules.slice(0, 4).map((m) => (
                     <button
                       key={m}
                       type="button"
@@ -1179,18 +1286,39 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                 </div>
               </div>
 
-              {/* Room / Lab */}
+              {/* Room/Lab: pick from the catalog, type a custom one, or save a new one */}
               <div>
                 <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1">
                   Room / Lab Venue
                 </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Lab 01"
-                  value={roomLab}
-                  onChange={(e) => setRoomLab(e.target.value)}
-                  className="w-full text-sm border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
+                <div className="flex gap-1.5">
+                  <input
+                    type="text"
+                    list="room-catalog-options"
+                    placeholder="e.g. Lab 01"
+                    value={roomLab}
+                    onChange={(e) => setRoomLab(e.target.value)}
+                    className="flex-1 min-w-0 text-sm bg-slate-900 border border-slate-700 text-slate-100 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  {roomLab.trim() &&
+                    !catalog.rooms.some((r) => r.toLowerCase() === roomLab.trim().toLowerCase()) && (
+                      <button
+                        type="button"
+                        onClick={handleSaveRoomInline}
+                        disabled={catalogBusy}
+                        title="Save this room/lab to the catalog permanently"
+                        className="shrink-0 flex items-center gap-1 text-[11px] font-bold bg-slate-800 hover:bg-emerald-600 disabled:opacity-50 text-slate-300 hover:text-white px-2.5 rounded-xl transition-colors cursor-pointer"
+                      >
+                        <Plus className="w-3.5 h-3.5" />
+                        <span>Save</span>
+                      </button>
+                    )}
+                </div>
+                <datalist id="room-catalog-options">
+                  {catalog.rooms.map((r) => (
+                    <option key={r} value={r} />
+                  ))}
+                </datalist>
                 <div className="flex flex-wrap gap-1.5 mt-2">
                   {catalog.rooms.map((r) => (
                     <button
@@ -1354,7 +1482,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
             onClick={() => setCatalogModalOpen(false)}
             className="absolute inset-0 cursor-default"
           />
-          <div className="relative bg-slate-900 rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 shadow-2xl border border-slate-800 animate-in fade-in zoom-in-95 duration-150">
+          <div className="relative bg-slate-900 rounded-2xl max-w-4xl w-full max-h-[85vh] overflow-y-auto p-6 shadow-2xl border border-slate-800 animate-in fade-in zoom-in-95 duration-150">
             <div className="flex items-center justify-between pb-4 border-b border-slate-800">
               <div>
                 <div className="flex items-center space-x-2 text-slate-500 text-xs font-bold uppercase tracking-wider">
@@ -1363,7 +1491,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                 </div>
                 <h3 className="text-lg font-bold text-slate-100">Academic Catalog Manager</h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Manage the student batches and lecture rooms/labs offered as quick-select presets when assigning duties.
+                  Manage the student batches, modules, and lecture rooms/labs offered as presets when assigning duties.
                 </p>
               </div>
               <button
@@ -1381,7 +1509,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
               </div>
             )}
 
-            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-6">
               {/* Batches Section */}
               <div>
                 <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
@@ -1393,12 +1521,12 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                     value={newBatchName}
                     onChange={(e) => setNewBatchName(e.target.value)}
                     placeholder="e.g. DSE 24.2F"
-                    className="flex-1 text-sm border border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="flex-1 min-w-0 text-sm bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                   <button
                     type="submit"
                     disabled={catalogBusy || !newBatchName.trim()}
-                    className="text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                    className="shrink-0 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                   </button>
@@ -1407,22 +1535,67 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                   {catalog.batches.length === 0 ? (
                     <p className="text-xs text-slate-400 italic">No batches yet. Add one above.</p>
                   ) : (
-                    catalog.batches.map((b) => (
-                      <div
-                        key={b}
-                        className="flex items-center justify-between bg-slate-800/60 border border-slate-800 rounded-lg px-2.5 py-1.5"
-                      >
-                        <span className="text-xs font-semibold text-slate-300">{b}</span>
-                        <button
-                          onClick={() => handleRemoveBatch(b)}
-                          disabled={catalogBusy}
-                          className="text-slate-400 hover:text-rose-600 disabled:opacity-50 cursor-pointer transition-colors"
-                          title={`Remove ${b}`}
+                    catalog.batches.map((b) =>
+                      editingCatalogItem?.kind === 'batch' && editingCatalogItem.original === b ? (
+                        <div
+                          key={b}
+                          className="flex items-center justify-between gap-1.5 bg-slate-800/60 border border-emerald-500/60 rounded-lg px-2.5 py-1.5"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))
+                          <input
+                            type="text"
+                            value={editCatalogValue}
+                            onChange={(e) => setEditCatalogValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveEditCatalogItem();
+                              if (e.key === 'Escape') handleCancelEditCatalogItem();
+                            }}
+                            autoFocus
+                            className="flex-1 min-w-0 text-xs bg-slate-950 border border-slate-700 text-white rounded px-2 py-1 focus:outline-none"
+                          />
+                          <button
+                            onClick={handleSaveEditCatalogItem}
+                            disabled={catalogBusy}
+                            className="shrink-0 text-emerald-400 hover:text-emerald-300 disabled:opacity-50 cursor-pointer"
+                            title="Save"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={handleCancelEditCatalogItem}
+                            disabled={catalogBusy}
+                            className="shrink-0 text-slate-400 hover:text-slate-200 disabled:opacity-50 cursor-pointer"
+                            title="Cancel"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          key={b}
+                          className="flex items-center justify-between bg-slate-800/60 border border-slate-800 rounded-lg px-2.5 py-1.5"
+                        >
+                          <span className="text-xs font-semibold text-slate-300 truncate">{b}</span>
+                          <div className="flex items-center gap-2 ml-2 shrink-0">
+                            <button
+                              onClick={() => handleStartEditCatalogItem('batch', b)}
+                              disabled={catalogBusy}
+                              className="text-slate-400 hover:text-blue-400 disabled:opacity-50 cursor-pointer transition-colors"
+                              title={`Edit ${b}`}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleRemoveBatch(b)}
+                              disabled={catalogBusy}
+                              className="text-slate-400 hover:text-rose-600 disabled:opacity-50 cursor-pointer transition-colors"
+                              title={`Remove ${b}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    )
                   )}
                 </div>
               </div>
@@ -1438,12 +1611,12 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                     value={newRoomName}
                     onChange={(e) => setNewRoomName(e.target.value)}
                     placeholder="e.g. Lab 05"
-                    className="flex-1 text-sm border border-slate-700 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                    className="flex-1 min-w-0 text-sm bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
                   />
                   <button
                     type="submit"
                     disabled={catalogBusy || !newRoomName.trim()}
-                    className="text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                    className="shrink-0 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                   </button>
@@ -1452,22 +1625,157 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                   {catalog.rooms.length === 0 ? (
                     <p className="text-xs text-slate-400 italic">No rooms/labs yet. Add one above.</p>
                   ) : (
-                    catalog.rooms.map((r) => (
-                      <div
-                        key={r}
-                        className="flex items-center justify-between bg-slate-800/60 border border-slate-800 rounded-lg px-2.5 py-1.5"
-                      >
-                        <span className="text-xs font-semibold text-slate-300">{r}</span>
-                        <button
-                          onClick={() => handleRemoveRoom(r)}
-                          disabled={catalogBusy}
-                          className="text-slate-400 hover:text-rose-600 disabled:opacity-50 cursor-pointer transition-colors"
-                          title={`Remove ${r}`}
+                    catalog.rooms.map((r) =>
+                      editingCatalogItem?.kind === 'room' && editingCatalogItem.original === r ? (
+                        <div
+                          key={r}
+                          className="flex items-center justify-between gap-1.5 bg-slate-800/60 border border-emerald-500/60 rounded-lg px-2.5 py-1.5"
                         >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))
+                          <input
+                            type="text"
+                            value={editCatalogValue}
+                            onChange={(e) => setEditCatalogValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveEditCatalogItem();
+                              if (e.key === 'Escape') handleCancelEditCatalogItem();
+                            }}
+                            autoFocus
+                            className="flex-1 min-w-0 text-xs bg-slate-950 border border-slate-700 text-white rounded px-2 py-1 focus:outline-none"
+                          />
+                          <button
+                            onClick={handleSaveEditCatalogItem}
+                            disabled={catalogBusy}
+                            className="shrink-0 text-emerald-400 hover:text-emerald-300 disabled:opacity-50 cursor-pointer"
+                            title="Save"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={handleCancelEditCatalogItem}
+                            disabled={catalogBusy}
+                            className="shrink-0 text-slate-400 hover:text-slate-200 disabled:opacity-50 cursor-pointer"
+                            title="Cancel"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          key={r}
+                          className="flex items-center justify-between bg-slate-800/60 border border-slate-800 rounded-lg px-2.5 py-1.5"
+                        >
+                          <span className="text-xs font-semibold text-slate-300 truncate">{r}</span>
+                          <div className="flex items-center gap-2 ml-2 shrink-0">
+                            <button
+                              onClick={() => handleStartEditCatalogItem('room', r)}
+                              disabled={catalogBusy}
+                              className="text-slate-400 hover:text-blue-400 disabled:opacity-50 cursor-pointer transition-colors"
+                              title={`Edit ${r}`}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleRemoveRoom(r)}
+                              disabled={catalogBusy}
+                              className="text-slate-400 hover:text-rose-600 disabled:opacity-50 cursor-pointer transition-colors"
+                              title={`Remove ${r}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    )
+                  )}
+                </div>
+              </div>
+
+              {/* Modules/Subjects Section */}
+              <div>
+                <h4 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+                  Modules / Subjects ({catalog.modules.length})
+                </h4>
+                <form onSubmit={handleAddModule} className="flex gap-1.5 mb-3">
+                  <input
+                    type="text"
+                    value={newModuleName}
+                    onChange={(e) => setNewModuleName(e.target.value)}
+                    placeholder="e.g. Cloud Computing Essentials"
+                    className="flex-1 min-w-0 text-sm bg-slate-950 border border-slate-700 text-white rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={catalogBusy || !newModuleName.trim()}
+                    className="shrink-0 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </form>
+                <div className="space-y-1.5 max-h-64 overflow-y-auto">
+                  {catalog.modules.length === 0 ? (
+                    <p className="text-xs text-slate-400 italic">No modules yet. Add one above.</p>
+                  ) : (
+                    catalog.modules.map((m) =>
+                      editingCatalogItem?.kind === 'module' && editingCatalogItem.original === m ? (
+                        <div
+                          key={m}
+                          className="flex items-center justify-between gap-1.5 bg-slate-800/60 border border-emerald-500/60 rounded-lg px-2.5 py-1.5"
+                        >
+                          <input
+                            type="text"
+                            value={editCatalogValue}
+                            onChange={(e) => setEditCatalogValue(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleSaveEditCatalogItem();
+                              if (e.key === 'Escape') handleCancelEditCatalogItem();
+                            }}
+                            autoFocus
+                            className="flex-1 min-w-0 text-xs bg-slate-950 border border-slate-700 text-white rounded px-2 py-1 focus:outline-none"
+                          />
+                          <button
+                            onClick={handleSaveEditCatalogItem}
+                            disabled={catalogBusy}
+                            className="shrink-0 text-emerald-400 hover:text-emerald-300 disabled:opacity-50 cursor-pointer"
+                            title="Save"
+                          >
+                            <Check className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={handleCancelEditCatalogItem}
+                            disabled={catalogBusy}
+                            className="shrink-0 text-slate-400 hover:text-slate-200 disabled:opacity-50 cursor-pointer"
+                            title="Cancel"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <div
+                          key={m}
+                          className="flex items-center justify-between bg-slate-800/60 border border-slate-800 rounded-lg px-2.5 py-1.5"
+                        >
+                          <span className="text-xs font-semibold text-slate-300 truncate">{m}</span>
+                          <div className="flex items-center gap-2 ml-2 shrink-0">
+                            <button
+                              onClick={() => handleStartEditCatalogItem('module', m)}
+                              disabled={catalogBusy}
+                              className="text-slate-400 hover:text-blue-400 disabled:opacity-50 cursor-pointer transition-colors"
+                              title={`Edit ${m}`}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleRemoveModule(m)}
+                              disabled={catalogBusy}
+                              className="shrink-0 text-slate-400 hover:text-rose-600 disabled:opacity-50 cursor-pointer transition-colors"
+                              title={`Remove ${m}`}
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    )
                   )}
                 </div>
               </div>

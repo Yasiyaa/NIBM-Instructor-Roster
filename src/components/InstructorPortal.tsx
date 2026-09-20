@@ -18,8 +18,10 @@ import {
   Link2,
 } from 'lucide-react';
 import { submitLeaveAction } from '@/lib/actions';
+import { useDialog } from './DialogProvider';
 
 interface InstructorPortalProps {
+  currentUser: User;
   allInstructors: User[];
   dutyAssignments: DutyAssignment[];
   nightShifts: NightShift[];
@@ -29,6 +31,7 @@ interface InstructorPortalProps {
 }
 
 export const InstructorPortal: React.FC<InstructorPortalProps> = ({
+  currentUser,
   allInstructors,
   dutyAssignments,
   nightShifts,
@@ -36,12 +39,21 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
   rosterWeek,
   onRefresh,
 }) => {
+  const { notify } = useDialog();
+  // The "instructors" account is the one shared kiosk login used by
+  // whoever's physically at the terminal; every other account here belongs
+  // to one real person, so the header shouldn't call it a shared terminal.
+  const isSharedKiosk = currentUser.username === 'instructors';
   const [activeSubTab, setActiveSubTab] = useState<'schedule' | 'applyLeave' | 'teamLeaves'>('schedule');
-  // Selected instructor filter for viewing tasks
-  const [selectedInstructorId, setSelectedInstructorId] = useState<string>('ALL');
+  // Selected instructor filter for viewing tasks -- defaults to "just me"
+  // for a real individual account, and the full roster for the shared kiosk.
+  const [selectedInstructorId, setSelectedInstructorId] = useState<string>(isSharedKiosk ? 'ALL' : currentUser.id);
 
-  // Leave Form State
-  const [applicantId, setApplicantId] = useState<string>('');
+  // Leave Form State -- pre-filled with the signed-in instructor's own name
+  // so they don't have to find themselves in the list every time; the
+  // shared kiosk account still starts blank since it applies on anyone's
+  // behalf.
+  const [applicantId, setApplicantId] = useState<string>(isSharedKiosk ? '' : currentUser.id);
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [reason, setReason] = useState<string>('');
@@ -72,7 +84,7 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
       setFeedLinkCopied(true);
       setTimeout(() => setFeedLinkCopied(false), 2500);
     } catch {
-      alert('Could not copy link. Long-press the Subscribe button and copy the URL manually.');
+      await notify('Could not copy link. Long-press the Subscribe button and copy the URL manually.');
     }
   };
 
@@ -124,11 +136,13 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
     try {
       await submitLeaveAction(applicantId, startDate, end, reason.trim());
       const inst = allInstructors.find((i) => i.id === applicantId);
-      setSuccessMessage(`Holiday application for ${inst?.fullName || 'Instructor'} submitted! Yasith & Dr. Thisara have been notified.`);
+      setSuccessMessage(
+        `Holiday application for ${inst?.fullName || 'Instructor'} submitted! It's now awaiting review in the Leave Approvals queue.`
+      );
       setReason('');
       setStartDate('');
       setEndDate('');
-      setApplicantId('');
+      setApplicantId(isSharedKiosk ? '' : currentUser.id);
       onRefresh();
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch {
@@ -151,9 +165,13 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
               <span className="text-xs text-purple-300 font-semibold uppercase tracking-wider">
                 Instructors Cadre Portal
               </span>
-              <h2 className="text-2xl font-black text-white">General Instructor Workspace</h2>
+              <h2 className="text-2xl font-black text-white">
+                {isSharedKiosk ? 'General Instructor Workspace' : `Welcome, ${currentUser.fullName.split(' ')[0]}`}
+              </h2>
               <p className="text-xs text-slate-300 mt-0.5">
-                Shared terminal for the 8 team members • Check assigned lectures, night shifts & apply for holiday
+                {isSharedKiosk
+                  ? 'Shared terminal for the 8 team members • Check assigned lectures, night shifts & apply for holiday'
+                  : 'Check your assigned lectures, night shifts & apply for holiday'}
               </p>
             </div>
           </div>
@@ -388,7 +406,8 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
               Apply for Holiday / Leave
             </h3>
             <p className="text-xs text-slate-500 mb-5">
-              Select your name and enter your leave request. Demonstrator Yasith and Dr. Thisara will be alerted automatically.
+              Select your name and enter your leave request. It will appear in the Leave Approvals queue for the
+              Demonstrator, Executive, or Admin to review.
             </p>
 
             {successMessage && (
@@ -414,13 +433,13 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
                 <select
                   value={applicantId}
                   onChange={(e) => setApplicantId(e.target.value)}
-                  className="w-full text-sm border border-slate-700 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                  className="w-full text-sm bg-slate-900 border border-slate-700 text-slate-100 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
                   required
                 >
                   <option value="">Select your name from the 8 instructors...</option>
                   {allInstructors.map((inst) => (
                     <option key={inst.id} value={inst.id}>
-                      {inst.fullName} ({inst.email})
+                      {inst.fullName} (@{inst.username})
                     </option>
                   ))}
                 </select>

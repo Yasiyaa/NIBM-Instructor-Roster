@@ -21,7 +21,8 @@ export const LeaveManagement: React.FC<LeaveManagementProps> = ({
   const [comment, setComment] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const canApprove = currentUser.role === 'DEMONSTRATOR' || currentUser.role === 'EXECUTIVE';
+  const canApprove =
+    currentUser.role === 'DEMONSTRATOR' || currentUser.role === 'EXECUTIVE' || currentUser.role === 'ADMIN';
 
   const filteredRequests = leaveRequests.filter((l) => {
     if (filter === 'ALL') return true;
@@ -31,7 +32,7 @@ export const LeaveManagement: React.FC<LeaveManagementProps> = ({
   const handleReview = async (leaveId: string, status: 'APPROVED' | 'REJECTED') => {
     setIsProcessing(true);
     try {
-      await reviewLeaveAction(leaveId, status, currentUser.id, comment.trim());
+      await reviewLeaveAction(leaveId, status, comment.trim());
       setActionId(null);
       setComment('');
       onRefresh();
@@ -53,11 +54,8 @@ export const LeaveManagement: React.FC<LeaveManagementProps> = ({
               <span>Leave & Absence Authority</span>
             </div>
             <h2 className="text-2xl font-black tracking-tight text-white">
-              Instructor Leave Management & Review
+              Leave Management & Review
             </h2>
-            <p className="text-slate-300 text-sm mt-1 max-w-2xl">
-              Dual sign-off console: Demonstrator Yasith and Dr. Thisara have full authority to endorse or decline leave requests. Once approved, the conflict engine automatically blocks scheduling duties for that instructor.
-            </p>
           </div>
 
           {/* Current Reviewer Identity Badge */}
@@ -70,14 +68,14 @@ export const LeaveManagement: React.FC<LeaveManagementProps> = ({
             </span>
             {!canApprove && (
               <span className="text-[10px] text-rose-400 block mt-0.5">
-                (View-only: switch to Yasith or Dr. Thisara to approve)
+                (View-only: your role cannot approve or reject leave requests)
               </span>
             )}
           </div>
         </div>
 
         {/* Filter Pills */}
-        <div className="flex items-center gap-2 mt-6 pt-4 border-t border-slate-800/80 text-xs">
+        <div className="flex items-center flex-wrap gap-2 mt-6 pt-4 border-t border-slate-800/80 text-xs">
           <span className="text-slate-400 font-medium mr-2">Filter by Status:</span>
           {(['PENDING', 'APPROVED', 'REJECTED', 'ALL'] as const).map((st) => (
             <button

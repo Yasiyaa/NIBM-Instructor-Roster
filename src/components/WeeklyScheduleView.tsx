@@ -235,7 +235,7 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
           <div>
             <div className="flex items-center space-x-2 text-blue-400 text-sm font-medium mb-1">
               <Shield className="w-4 h-4" />
-              <span>Executive Weekly Overview • Dr. Thisara</span>
+              <span>Executive Weekly Overview</span>
             </div>
             <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
               <span>Full-Week Master Schedule</span>
@@ -243,9 +243,6 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                 7-Day Matrix
               </span>
             </h2>
-            <p className="text-slate-300 text-sm mt-1 max-w-2xl">
-              High-level operational view of all lectures, practical sessions, night shifts, and instructor deployments across the entire week.
-            </p>
           </div>
 
           {/* Roster Publication Status & Actions */}
@@ -376,7 +373,7 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
         <h1 className="text-xl font-black text-slate-100">National Institute of Business Management (NIBM)</h1>
         <h2 className="text-base font-bold text-slate-300">School of Computing — Instructor Duty Roster</h2>
         <p className="text-xs text-slate-400">
-          Week: {planningStartDate} to {weekEndDate} | Status: {rosterWeek.status} | Generated for Dr. Thisara
+          Week: {planningStartDate} to {weekEndDate} | Status: {rosterWeek.status}
         </p>
       </div>
 
@@ -818,7 +815,7 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                               <span>{item.instructor.phone}</span>
                             </a>
                           ) : (
-                            <div className="text-[10px] text-slate-400">{item.instructor.email}</div>
+                            <div className="text-[10px] text-slate-400">@{item.instructor.username}</div>
                           )}
                         </div>
                       </div>

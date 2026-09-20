@@ -10,8 +10,15 @@ export type LeaveStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELLED';
 export interface User {
   id: string;
   fullName: string;
-  email: string;
+  // The login identifier. Email is optional contact info only -- it is
+  // never used for authentication.
+  username: string;
+  email?: string;
   role: Role;
+  // Display title within a role. Plain INSTRUCTOR accounts leave this unset
+  // (shown as "Instructor"); "Technical Assistant" is the one exception,
+  // with identical permissions.
+  jobTitle?: string;
   phone?: string;
   avatarColor?: string;
   isActive: boolean;
@@ -106,4 +113,5 @@ export interface ExecutiveStatusReport {
 export interface AcademicCatalog {
   batches: string[];
   rooms: string[];
+  modules: string[];
 }

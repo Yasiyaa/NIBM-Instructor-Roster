@@ -31,8 +31,14 @@ enum LeaveStatus {
 model User {
   id                 String   @id @default(uuid())
   fullName           String
-  email              String   @unique
+  // The login identifier. Email is now optional contact info only --
+  // authentication is username + password, never email.
+  username           String   @unique
+  email              String?  @unique
   role               Role     @default(INSTRUCTOR)
+  // Display title within a role -- e.g. INSTRUCTOR covers both "Technical
+  // Instructor" and "Technical Assistant", who share identical permissions.
+  jobTitle           String?
   phone              String?
   avatarColor        String?  @default("indigo")
   isActive           Boolean  @default(true)
@@ -139,4 +145,5 @@ model Catalog {
   id      String   @id @default("singleton")
   batches String[]
   rooms   String[]
+  modules String[] @default([])
 }

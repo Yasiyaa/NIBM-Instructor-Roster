@@ -22,8 +22,10 @@ function toPublicUser(u: PrismaUser): User {
   return {
     id: u.id,
     fullName: u.fullName,
-    email: u.email,
+    username: u.username,
+    email: u.email ?? undefined,
     role: u.role,
+    jobTitle: u.jobTitle ?? undefined,
     phone: u.phone ?? undefined,
     avatarColor: u.avatarColor ?? undefined,
     isActive: u.isActive,
@@ -31,43 +33,55 @@ function toPublicUser(u: PrismaUser): User {
   };
 }
 
-// Generates a short, human-typeable temporary password for admin-created
-// accounts (avoids ambiguous characters like 0/O, 1/l/I).
-function generateTempPassword(): string {
-  const alphabet = 'ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
-  let out = '';
-  for (let i = 0; i < 10; i++) {
-    out += alphabet[Math.floor(Math.random() * alphabet.length)];
-  }
-  return out;
+// Login identifiers are lowercase, no spaces, letters/numbers/./_/- only.
+function normalizeUsername(raw: string): string {
+  return raw.trim().toLowerCase().replace(/\s+/g, '.');
 }
 
-// If ADMIN_EMAIL / ADMIN_PASSWORD are set and no ADMIN account exists yet,
-// creates one. Safe to leave the env vars in place permanently: once an
-// admin exists (seeded or otherwise), this is a no-op on every later boot,
-// so it never resets a live admin's password. Guarded by a module-level
-// flag so a warm serverless instance only checks once, not on every request.
+// Generates a predictable, easy-to-relay temporary password for
+// admin-created accounts: "<FirstName>@123". Honorifics (Dr., Mr., ...) are
+// skipped so "Dr. Thisara" yields "Thisara@123", not "Dr@123". This is only
+// ever a *temporary* credential -- mustChangePassword forces a real password
+// on first sign-in, so predictability here is an onboarding convenience, not
+// a long-term secret.
+const HONORIFICS = new Set(['dr', 'mr', 'mrs', 'ms', 'prof']);
+function generateTempPassword(fullName: string): string {
+  const tokens = fullName.trim().split(/\s+/).filter(Boolean);
+  const nameToken =
+    tokens.find((t) => !HONORIFICS.has(t.replace(/\./g, '').toLowerCase())) || tokens[0] || 'User';
+  const letters = nameToken.replace(/[^a-zA-Z]/g, '') || 'User';
+  const capitalized = letters.charAt(0).toUpperCase() + letters.slice(1).toLowerCase();
+  return `${capitalized}@123`;
+}
+
+// If ADMIN_USERNAME / ADMIN_PASSWORD are set and no ADMIN account exists
+// yet, creates one. Safe to leave the env vars in place permanently: once
+// an admin exists (seeded or otherwise), this is a no-op on every later
+// boot, so it never resets a live admin's password. Guarded by a
+// module-level flag so a warm serverless instance only checks once, not on
+// every request.
 let adminSeedChecked = false;
 async function ensureAdminSeeded(): Promise<void> {
   if (adminSeedChecked) return;
   adminSeedChecked = true;
 
-  const adminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const adminUsername = process.env.ADMIN_USERNAME ? normalizeUsername(process.env.ADMIN_USERNAME) : undefined;
   const adminPassword = process.env.ADMIN_PASSWORD;
-  if (!adminEmail || !adminPassword) return;
+  if (!adminUsername || !adminPassword) return;
 
   const existingAdmin = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
   if (existingAdmin) return;
 
   // Two cold-start serverless instances could both reach this point at once
-  // (each has its own adminSeedChecked flag); let the email unique
+  // (each has its own adminSeedChecked flag); let the username unique
   // constraint be the real guard and treat a conflict as "already seeded".
   let admin;
   try {
     admin = await prisma.user.create({
       data: {
         fullName: 'System Administrator',
-        email: adminEmail,
+        username: adminUsername,
+        email: process.env.ADMIN_EMAIL?.trim().toLowerCase() || undefined,
         role: 'ADMIN',
         isActive: true,
         mustChangePassword: false,
@@ -83,7 +97,7 @@ async function ensureAdminSeeded(): Promise<void> {
 
   await logAudit('ADMIN_SEEDED', 'User', {
     targetId: admin.id,
-    metadata: `Admin account seeded from environment for ${adminEmail}`,
+    metadata: `Admin account seeded from environment as "${adminUsername}"`,
   });
 }
 
@@ -112,10 +126,19 @@ export async function getAllUsers(): Promise<User[]> {
   return users.map(toPublicUser);
 }
 
+// The "instructors" account is a shared kiosk login (one physical terminal,
+// no single owner), not a real cadre member -- it must never appear in the
+// free-standby pool, duty-assignment dropdowns, or WhatsApp dispatch list.
+// Matched by username (the stable, admin-assigned identifier) rather than a
+// hardcoded id, since real accounts get a generated UUID id.
+const SHARED_KIOSK_USERNAME = 'instructors';
 export async function getInstructors(): Promise<User[]> {
   const users = await getAllUsers();
   return users.filter(
-    (u) => (u.role === 'INSTRUCTOR' || u.role === 'DEMONSTRATOR') && u.id !== 'general-instructor'
+    (u) =>
+      (u.role === 'INSTRUCTOR' || u.role === 'DEMONSTRATOR') &&
+      u.id !== 'general-instructor' &&
+      u.username !== SHARED_KIOSK_USERNAME
   );
 }
 
@@ -129,26 +152,28 @@ export async function getUserById(id: string): Promise<User | undefined> {
 // Authentication & Account Management
 // ----------------------------------------------------
 export async function verifyCredentials(
-  email: string,
+  username: string,
   password: string
 ): Promise<{ success: true; user: User } | { success: false; error: string }> {
   await ensureAdminSeeded();
-  const normalized = email.trim().toLowerCase();
-  const stored = await prisma.user.findUnique({ where: { email: normalized } });
+  const normalized = normalizeUsername(username);
+  const stored = await prisma.user.findUnique({ where: { username: normalized } });
   if (!stored || !stored.isActive) {
-    return { success: false, error: 'Invalid email or password.' };
+    return { success: false, error: 'Invalid username or password.' };
   }
   const valid = await bcrypt.compare(password, stored.passwordHash);
   if (!valid) {
-    return { success: false, error: 'Invalid email or password.' };
+    return { success: false, error: 'Invalid username or password.' };
   }
   return { success: true, user: toPublicUser(stored) };
 }
 
 export interface CreateUserInput {
   fullName: string;
-  email: string;
+  username: string;
+  email?: string;
   role: PrismaRole;
+  jobTitle?: string;
   phone?: string;
 }
 
@@ -160,23 +185,32 @@ export async function createUser(
   input: CreateUserInput,
   actorId?: string
 ): Promise<{ success: true; user: User; tempPassword: string } | { success: false; error: string }> {
-  const email = input.email.trim().toLowerCase();
+  const username = normalizeUsername(input.username);
   const fullName = input.fullName.trim();
-  if (!fullName || !email) {
-    return { success: false, error: 'Name and email are required.' };
+  const email = input.email?.trim().toLowerCase() || undefined;
+  if (!fullName || !username) {
+    return { success: false, error: 'Name and username are required.' };
   }
 
-  const existing = await prisma.user.findUnique({ where: { email } });
+  const existing = await prisma.user.findFirst({ where: { OR: [{ username }, ...(email ? [{ email }] : [])] } });
   if (existing) {
-    return { success: false, error: `A user with email "${email}" already exists.` };
+    return {
+      success: false,
+      error:
+        existing.username === username
+          ? `Username "${username}" is already taken.`
+          : `A user with email "${email}" already exists.`,
+    };
   }
 
-  const tempPassword = generateTempPassword();
+  const tempPassword = generateTempPassword(fullName);
   const created = await prisma.user.create({
     data: {
       fullName,
+      username,
       email,
       role: input.role,
+      jobTitle: input.jobTitle?.trim() || undefined,
       phone: input.phone?.trim() || undefined,
       isActive: true,
       mustChangePassword: true,
@@ -187,7 +221,7 @@ export async function createUser(
   await logAudit('USER_CREATED', 'User', {
     userId: actorId,
     targetId: created.id,
-    metadata: `Created ${created.role} account for ${created.fullName} (${created.email})`,
+    metadata: `Created ${created.role} account "${created.username}" for ${created.fullName}`,
   });
 
   return { success: true, user: toPublicUser(created), tempPassword };
@@ -217,6 +251,42 @@ export async function changePassword(
   return { success: true };
 }
 
+// Self-service: lets a signed-in user fill in their own contact info once
+// admin hands them a bare account (name + username only). Passing an empty
+// string for a field clears it; omitting the field leaves it unchanged.
+export async function updateOwnProfile(
+  userId: string,
+  input: { email?: string; phone?: string }
+): Promise<{ success: true; user: User } | { success: false; error: string }> {
+  const stored = await prisma.user.findUnique({ where: { id: userId } });
+  if (!stored) return { success: false, error: 'User not found.' };
+
+  const data: Prisma.UserUpdateInput = {};
+
+  if (input.email !== undefined) {
+    const email = input.email.trim().toLowerCase();
+    if (email) {
+      const conflict = await prisma.user.findFirst({ where: { email, NOT: { id: userId } } });
+      if (conflict) return { success: false, error: `A user with email "${email}" already exists.` };
+      data.email = email;
+    } else {
+      data.email = null;
+    }
+  }
+
+  if (input.phone !== undefined) {
+    data.phone = input.phone.trim() || null;
+  }
+
+  const updated = await prisma.user.update({ where: { id: userId }, data });
+  await logAudit('PROFILE_UPDATED', 'User', {
+    userId,
+    targetId: userId,
+    metadata: `${updated.fullName} updated their contact details`,
+  });
+  return { success: true, user: toPublicUser(updated) };
+}
+
 export async function getAllUsersIncludingInactive(): Promise<User[]> {
   const users = await prisma.user.findMany({ orderBy: { fullName: 'asc' } });
   return users.map(toPublicUser);
@@ -236,6 +306,50 @@ export async function setUserActive(
     targetId: userId,
     metadata: `${stored.fullName} (${stored.email}) ${isActive ? 'reactivated' : 'deactivated'}`,
   });
+  return { success: true };
+}
+
+// Admin-only: permanently removes an account row. Deliberately narrow --
+// DutyAssignment/NightShift/LeaveRequest cascade-delete on their instructor,
+// and AuditLog anonymizes to "System" on its actor, so hard-deleting anyone
+// with real history would either silently erase their teaching/leave record
+// or gut the compliance trail's attribution. Only a deactivated account with
+// zero footprint anywhere may be permanently deleted; everyone else stays
+// deactivate-only.
+export async function deleteUserPermanently(
+  userId: string,
+  actorId?: string
+): Promise<{ success: true } | { success: false; error: string }> {
+  const stored = await prisma.user.findUnique({ where: { id: userId } });
+  if (!stored) return { success: false, error: 'User not found.' };
+  if (stored.isActive) {
+    return { success: false, error: 'Deactivate this account first, then it can be permanently deleted.' };
+  }
+
+  const [duties, nights, leaves, reviewed, published, audits] = await Promise.all([
+    prisma.dutyAssignment.count({ where: { instructorId: userId } }),
+    prisma.nightShift.count({ where: { instructorId: userId } }),
+    prisma.leaveRequest.count({ where: { instructorId: userId } }),
+    prisma.leaveRequest.count({ where: { reviewedById: userId } }),
+    prisma.rosterWeek.count({ where: { publishedById: userId } }),
+    prisma.auditLog.count({ where: { userId } }),
+  ]);
+  if (duties + nights + leaves + reviewed + published + audits > 0) {
+    return {
+      success: false,
+      error: `${stored.fullName} has schedule or audit history and can't be permanently deleted -- it stays deactivated to preserve the record.`,
+    };
+  }
+
+  // Logged before the row is gone so the deletion itself is traceable;
+  // targetId is a plain string field, not a foreign key, so it's fine to
+  // reference an id that no longer exists after this.
+  await logAudit('USER_DELETED', 'User', {
+    userId: actorId,
+    targetId: userId,
+    metadata: `Permanently deleted ${stored.role} account "${stored.username}" (${stored.fullName})`,
+  });
+  await prisma.user.delete({ where: { id: userId } });
   return { success: true };
 }
 
@@ -755,7 +869,7 @@ async function getOrCreateCatalogRow() {
 
 export async function getCatalog(): Promise<AcademicCatalog> {
   const row = await getOrCreateCatalogRow();
-  return { batches: row.batches, rooms: row.rooms };
+  return { batches: row.batches, rooms: row.rooms, modules: row.modules };
 }
 
 export async function addCatalogBatch(name: string, actorId?: string): Promise<{ success: boolean; error?: string }> {
@@ -783,6 +897,34 @@ export async function removeCatalogBatch(name: string, actorId?: string): Promis
   return { success: true };
 }
 
+export async function updateCatalogBatch(
+  oldName: string,
+  newName: string,
+  actorId?: string
+): Promise<{ success: boolean; error?: string }> {
+  const trimmed = newName.trim();
+  if (!trimmed) return { success: false, error: 'Batch code cannot be empty.' };
+
+  const row = await getOrCreateCatalogRow();
+  if (!row.batches.includes(oldName)) return { success: false, error: `Batch "${oldName}" not found.` };
+  if (
+    trimmed.toLowerCase() !== oldName.toLowerCase() &&
+    row.batches.some((b) => b.toLowerCase() === trimmed.toLowerCase())
+  ) {
+    return { success: false, error: `Batch "${trimmed}" already exists.` };
+  }
+
+  await prisma.catalog.update({
+    where: { id: CATALOG_ID },
+    data: { batches: row.batches.map((b) => (b === oldName ? trimmed : b)) },
+  });
+  await logAudit('CATALOG_UPDATED', 'AcademicCatalog', {
+    userId: actorId,
+    metadata: `Renamed batch "${oldName}" to "${trimmed}"`,
+  });
+  return { success: true };
+}
+
 export async function addCatalogRoom(name: string, actorId?: string): Promise<{ success: boolean; error?: string }> {
   const trimmed = name.trim();
   if (!trimmed) return { success: false, error: 'Room/lab name cannot be empty.' };
@@ -805,5 +947,86 @@ export async function removeCatalogRoom(name: string, actorId?: string): Promise
     data: { rooms: row.rooms.filter((r) => r !== name) },
   });
   await logAudit('CATALOG_UPDATED', 'AcademicCatalog', { userId: actorId, metadata: `Removed room/lab "${name}"` });
+  return { success: true };
+}
+
+export async function updateCatalogRoom(
+  oldName: string,
+  newName: string,
+  actorId?: string
+): Promise<{ success: boolean; error?: string }> {
+  const trimmed = newName.trim();
+  if (!trimmed) return { success: false, error: 'Room/lab name cannot be empty.' };
+
+  const row = await getOrCreateCatalogRow();
+  if (!row.rooms.includes(oldName)) return { success: false, error: `Room/lab "${oldName}" not found.` };
+  if (
+    trimmed.toLowerCase() !== oldName.toLowerCase() &&
+    row.rooms.some((r) => r.toLowerCase() === trimmed.toLowerCase())
+  ) {
+    return { success: false, error: `Room/lab "${trimmed}" already exists.` };
+  }
+
+  await prisma.catalog.update({
+    where: { id: CATALOG_ID },
+    data: { rooms: row.rooms.map((r) => (r === oldName ? trimmed : r)) },
+  });
+  await logAudit('CATALOG_UPDATED', 'AcademicCatalog', {
+    userId: actorId,
+    metadata: `Renamed room/lab "${oldName}" to "${trimmed}"`,
+  });
+  return { success: true };
+}
+
+export async function addCatalogModule(name: string, actorId?: string): Promise<{ success: boolean; error?: string }> {
+  const trimmed = name.trim();
+  if (!trimmed) return { success: false, error: 'Module name cannot be empty.' };
+
+  const row = await getOrCreateCatalogRow();
+  if (row.modules.some((m) => m.toLowerCase() === trimmed.toLowerCase())) {
+    return { success: false, error: `Module "${trimmed}" already exists.` };
+  }
+  await prisma.catalog.update({ where: { id: CATALOG_ID }, data: { modules: { push: trimmed } } });
+  await logAudit('CATALOG_UPDATED', 'AcademicCatalog', { userId: actorId, metadata: `Added module "${trimmed}"` });
+  return { success: true };
+}
+
+export async function removeCatalogModule(name: string, actorId?: string): Promise<{ success: boolean; error?: string }> {
+  const row = await getOrCreateCatalogRow();
+  if (!row.modules.includes(name)) return { success: false, error: `Module "${name}" not found.` };
+
+  await prisma.catalog.update({
+    where: { id: CATALOG_ID },
+    data: { modules: row.modules.filter((m) => m !== name) },
+  });
+  await logAudit('CATALOG_UPDATED', 'AcademicCatalog', { userId: actorId, metadata: `Removed module "${name}"` });
+  return { success: true };
+}
+
+export async function updateCatalogModule(
+  oldName: string,
+  newName: string,
+  actorId?: string
+): Promise<{ success: boolean; error?: string }> {
+  const trimmed = newName.trim();
+  if (!trimmed) return { success: false, error: 'Module name cannot be empty.' };
+
+  const row = await getOrCreateCatalogRow();
+  if (!row.modules.includes(oldName)) return { success: false, error: `Module "${oldName}" not found.` };
+  if (
+    trimmed.toLowerCase() !== oldName.toLowerCase() &&
+    row.modules.some((m) => m.toLowerCase() === trimmed.toLowerCase())
+  ) {
+    return { success: false, error: `Module "${trimmed}" already exists.` };
+  }
+
+  await prisma.catalog.update({
+    where: { id: CATALOG_ID },
+    data: { modules: row.modules.map((m) => (m === oldName ? trimmed : m)) },
+  });
+  await logAudit('CATALOG_UPDATED', 'AcademicCatalog', {
+    userId: actorId,
+    metadata: `Renamed module "${oldName}" to "${trimmed}"`,
+  });
   return { success: true };
 }
