@@ -1,6 +1,7 @@
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 generator client {
@@ -29,6 +30,7 @@ model User {
   id            String            @id @default(uuid())
   fullName      String
   email         String            @unique
+  passwordHash  String            @default("")
   role          Role              @default(INSTRUCTOR)
   phone         String?
   avatarColor   String?           @default("indigo")
@@ -46,8 +48,8 @@ model User {
 
 model RosterWeek {
   id            String            @id @default(uuid())
-  startDate     DateTime
-  endDate       DateTime
+  startDate     String            // YYYY-MM-DD
+  endDate       String            // YYYY-MM-DD
   status        RosterStatus      @default(DRAFT)
   publishedAt   DateTime?
   publishedById String?
@@ -59,6 +61,7 @@ model RosterWeek {
   nightShifts     NightShift[]
 
   @@unique([startDate, endDate])
+  @@index([startDate])
 }
 
 model DutyAssignment {
@@ -67,7 +70,7 @@ model DutyAssignment {
   rosterWeek      RosterWeek      @relation(fields: [rosterWeekId], references: [id], onDelete: Cascade)
   instructorId    String
   instructor      User            @relation(fields: [instructorId], references: [id], onDelete: Cascade)
-  dutyDate        DateTime
+  dutyDate        String          // YYYY-MM-DD
   slotLabel       String
   startTime       String
   endTime         String
@@ -79,6 +82,8 @@ model DutyAssignment {
   updatedAt       DateTime        @updatedAt
 
   @@unique([dutyDate, startTime, instructorId])
+  @@index([dutyDate])
+  @@index([instructorId])
 }
 
 model NightShift {
@@ -87,20 +92,22 @@ model NightShift {
   rosterWeek      RosterWeek      @relation(fields: [rosterWeekId], references: [id], onDelete: Cascade)
   instructorId    String
   instructor      User            @relation(fields: [instructorId], references: [id], onDelete: Cascade)
-  shiftDate       DateTime
+  shiftDate       String          // YYYY-MM-DD
   notes           String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
 
   @@unique([shiftDate, instructorId])
+  @@index([shiftDate])
+  @@index([instructorId])
 }
 
 model LeaveRequest {
   id              String          @id @default(uuid())
   instructorId    String
   instructor      User            @relation("InstructorLeaves", fields: [instructorId], references: [id], onDelete: Cascade)
-  startDate       DateTime
-  endDate         DateTime
+  startDate       String          // YYYY-MM-DD
+  endDate         String          // YYYY-MM-DD
   reason          String
   status          LeaveStatus     @default(PENDING)
   reviewedById    String?
@@ -109,6 +116,9 @@ model LeaveRequest {
   reviewComment   String?
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+
+  @@index([instructorId])
+  @@index([status])
 }
 
 model AuditLog {
@@ -120,4 +130,7 @@ model AuditLog {
   targetId        String?
   metadata        String?
   createdAt       DateTime        @default(now())
+
+  @@index([userId])
+  @@index([action])
 }

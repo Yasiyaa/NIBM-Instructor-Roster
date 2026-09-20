@@ -1,67 +1,82 @@
 'use client';
 
 import React, { useState } from 'react';
-import { User, Role } from '@/types';
-import { Shield, Sparkles, Users, Lock, Mail, ArrowRight, Eye, AlertCircle } from 'lucide-react';
+import { User } from '@/types';
+import { Lock, Mail, ArrowRight, Eye, AlertCircle, Loader2 } from 'lucide-react';
+import { loginAction } from '@/lib/actions';
 
 interface LoginPageProps {
   allUsers: User[];
-  onLogin: (user: User) => void;
+  onLoginSuccess: (user: User) => void;
   onOpenPublicBoard: () => void;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({
   allUsers,
-  onLogin,
+  onLoginSuccess,
   onOpenPublicBoard,
 }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const yasith = allUsers.find((u) => u.role === 'DEMONSTRATOR');
-  const thisara = allUsers.find((u) => u.role === 'EXECUTIVE');
+  const yasith = allUsers.find((u) => u.email === 'yasith@nibm.lk');
+  const kithnuka = allUsers.find((u) => u.email === 'kithnuka@nibm.lk');
+  const thisara = allUsers.find((u) => u.email === 'thisara@nibm.lk');
   const generalInstructor = allUsers.find((u) => u.id === 'general-instructor') || allUsers.find((u) => u.role === 'INSTRUCTOR');
 
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!email.trim() || !password.trim()) {
+      setError('Please enter both email and password');
+      return;
+    }
+
+    setIsLoading(true);
     setError(null);
 
-    const inputEmail = email.trim().toLowerCase();
+    try {
+      const res = await loginAction({
+        email: email.trim().toLowerCase(),
+        password,
+      });
 
-    // Check credentials matching user request:
-    // dr thisra using thisara@nibm.lk pw - 123
-    // yasith@nibm pw - 123 (accepts yasith@nibm.lk or yasith@nibm)
-    // instructors@nibm pw - 123 (accepts instructors@nibm.lk or instructors@nibm)
-    let matchedUser: User | undefined;
-
-    if (inputEmail === 'thisara@nibm.lk' || inputEmail === 'thisara@nibm') {
-      matchedUser = thisara;
-    } else if (inputEmail === 'yasith@nibm.lk' || inputEmail === 'yasith@nibm') {
-      matchedUser = yasith;
-    } else if (inputEmail === 'instructors@nibm.lk' || inputEmail === 'instructors@nibm') {
-      matchedUser = generalInstructor;
-    } else {
-      matchedUser = allUsers.find((u) => u.email.toLowerCase() === inputEmail);
+      if (!res.success || !res.user) {
+        setError(res.error || 'Authentication failed');
+      } else {
+        onLoginSuccess(res.user as User);
+      }
+    } catch {
+      setError('Network or server error during sign in');
+    } finally {
+      setIsLoading(false);
     }
-
-    if (!matchedUser) {
-      setError('Staff email not recognized. Valid accounts: thisara@nibm.lk, yasith@nibm.lk, or instructors@nibm.lk');
-      return;
-    }
-
-    if (password !== '123') {
-      setError('Invalid password. Password is: 123');
-      return;
-    }
-
-    onLogin(matchedUser);
   };
 
-  const handleQuickLogin = (targetUser: User) => {
+  const handleQuickFill = async (targetUser?: User) => {
+    if (!targetUser) return;
     setEmail(targetUser.email);
     setPassword('123');
-    onLogin(targetUser);
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const res = await loginAction({
+        email: targetUser.email,
+        password: '123',
+      });
+
+      if (!res.success || !res.user) {
+        setError(res.error || 'Sign in failed');
+      } else {
+        onLoginSuccess(res.user as User);
+      }
+    } catch {
+      setError('Network or server error during quick sign in');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -98,141 +113,168 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <div>
                 <div className="flex items-center space-x-2">
                   <span className="font-bold text-white text-sm">
-                    View Live Status Board
+                    Public Operational Board
                   </span>
-                  <span className="text-[10px] font-black bg-emerald-500/30 text-emerald-300 px-2 py-0.5 rounded border border-emerald-500/40 uppercase">
+                  <span className="text-[10px] bg-emerald-500/30 text-emerald-300 font-bold px-2 py-0.5 rounded border border-emerald-500/40">
                     No Login Required
                   </span>
                 </div>
                 <p className="text-xs text-slate-300 mt-0.5">
-                  See who is on duty, who is free, who is on leave, and tonight's night duty
+                  Read-only live monitor view for campus lobby screens & staff room displays
                 </p>
               </div>
             </div>
-            <ArrowRight className="w-4 h-4 text-blue-400 shrink-0 ml-2 group-hover:translate-x-1 transition-transform" />
+            <ArrowRight className="w-5 h-5 text-blue-400 group-hover:translate-x-1 transition-transform shrink-0" />
           </button>
 
-          {/* Divider */}
-          <div className="relative flex items-center justify-center">
-            <div className="border-t border-slate-700 w-full" />
-            <span className="bg-slate-800 px-3 text-xs font-bold text-slate-400 uppercase tracking-wider">
-              Or Staff Sign In
+          <div className="relative flex py-2 items-center">
+            <div className="flex-grow border-t border-slate-700"></div>
+            <span className="flex-shrink mx-4 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              Or Sign In with Staff Account
             </span>
+            <div className="flex-grow border-t border-slate-700"></div>
           </div>
 
-          {/* Standard Email / Password Form (Password: 123) */}
-          <form onSubmit={handleFormSubmit} className="space-y-4">
-            {error && (
-              <div className="p-3 bg-rose-500/20 border border-rose-500/40 rounded-xl text-rose-300 text-xs flex items-center space-x-2">
-                <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-                <span>{error}</span>
+          {/* Error Banner */}
+          {error && (
+            <div className="bg-rose-500/15 border border-rose-500/30 rounded-xl p-3.5 flex items-start space-x-2.5 text-xs text-rose-300">
+              <AlertCircle className="w-4 h-4 shrink-0 text-rose-400 mt-0.5" />
+              <div>
+                <span className="font-bold">Sign in error:</span> {error}
               </div>
-            )}
+            </div>
+          )}
 
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-                Staff Email Address
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Official Staff Email
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                  <Mail className="w-4 h-4" />
+                </div>
                 <input
-                  type="text"
-                  placeholder="thisara@nibm.lk, yasith@nibm.lk, or instructors@nibm.lk"
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full text-sm bg-slate-900/80 border border-slate-700 text-white rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-500"
+                  placeholder="e.g. yasith@nibm.lk or thisara@nibm.lk"
                   required
+                  className="block w-full pl-9 pr-3 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
             </div>
 
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">
-                  Password
-                </label>
-                <span className="text-[11px] font-semibold text-amber-400">Password is: 123</span>
-              </div>
+              <label className="block text-xs font-semibold text-slate-300 mb-1">
+                Password
+              </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500">
+                  <Lock className="w-4 h-4" />
+                </div>
                 <input
                   type="password"
-                  placeholder="Enter 123"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full text-sm bg-slate-900/80 border border-slate-700 text-white rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 placeholder:text-slate-500"
+                  placeholder="Enter your password"
                   required
+                  className="block w-full pl-9 pr-3 py-2.5 bg-slate-900/80 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
+              <p className="text-[11px] text-slate-400 mt-1">
+                Default password for all staff accounts is <code className="bg-slate-700 px-1 py-0.5 rounded text-amber-300">123</code>
+              </p>
             </div>
 
             <button
               type="submit"
-              className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-sm py-2.5 px-4 rounded-xl shadow-lg shadow-indigo-600/20 transition-all cursor-pointer"
+              disabled={isLoading}
+              className="w-full flex items-center justify-center space-x-2 py-3 px-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-blue-600/30 transition-all cursor-pointer disabled:opacity-50"
             >
-              <span>Sign In</span>
-              <ArrowRight className="w-4 h-4" />
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span>Authenticating...</span>
+                </>
+              ) : (
+                <>
+                  <span>Sign In</span>
+                  <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </form>
 
-          {/* Quick Sign-In Buttons */}
-          <div className="pt-2 border-t border-slate-700/80 space-y-2">
+          {/* Quick-Access Demo Cards */}
+          <div className="pt-2">
             <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
-              1-Click Fast Sign In (Auto-fills Password: 123):
+              1-Click Demo Profiles (Neon Database Connected)
             </span>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {/* Yasith */}
-              {yasith && (
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin(yasith)}
-                  className="text-left bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-800/60 p-2.5 rounded-xl transition-all cursor-pointer"
-                >
-                  <div className="flex items-center space-x-1.5 text-emerald-400 font-bold text-[11px]">
-                    <Sparkles className="w-3 h-3" />
-                    <span>Yasith</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400">yasith@nibm.lk (pw: 123)</div>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => handleQuickFill(yasith)}
+                className="bg-slate-900/60 hover:bg-slate-700/60 border border-emerald-600/30 hover:border-emerald-500 p-2.5 rounded-xl text-left transition-all group cursor-pointer"
+              >
+                <div className="flex items-center space-x-1.5 mb-1">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span className="font-bold text-xs text-white group-hover:text-emerald-300 truncate">
+                    Yasith
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-400">Demonstrator</div>
+              </button>
+
+              {/* Kithnuka */}
+              <button
+                type="button"
+                onClick={() => handleQuickFill(kithnuka)}
+                className="bg-slate-900/60 hover:bg-slate-700/60 border border-emerald-600/30 hover:border-emerald-500 p-2.5 rounded-xl text-left transition-all group cursor-pointer"
+              >
+                <div className="flex items-center space-x-1.5 mb-1">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                  <span className="font-bold text-xs text-white group-hover:text-emerald-300 truncate">
+                    Kithnuka
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-400">Demonstrator</div>
+              </button>
 
               {/* Dr. Thisara */}
-              {thisara && (
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin(thisara)}
-                  className="text-left bg-blue-950/40 hover:bg-blue-900/60 border border-blue-800/60 p-2.5 rounded-xl transition-all cursor-pointer"
-                >
-                  <div className="flex items-center space-x-1.5 text-blue-400 font-bold text-[11px]">
-                    <Shield className="w-3 h-3" />
-                    <span>Dr. Thisara</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400">thisara@nibm.lk (pw: 123)</div>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => handleQuickFill(thisara)}
+                className="bg-slate-900/60 hover:bg-slate-700/60 border border-blue-600/30 hover:border-blue-500 p-2.5 rounded-xl text-left transition-all group cursor-pointer"
+              >
+                <div className="flex items-center space-x-1.5 mb-1">
+                  <div className="w-2 h-2 rounded-full bg-blue-400" />
+                  <span className="font-bold text-xs text-white group-hover:text-blue-300 truncate">
+                    Dr. Thisara
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-400">Executive</div>
+              </button>
 
-              {/* Instructors */}
-              {generalInstructor && (
-                <button
-                  type="button"
-                  onClick={() => handleQuickLogin(generalInstructor)}
-                  className="text-left bg-purple-950/40 hover:bg-purple-900/60 border border-purple-800/60 p-2.5 rounded-xl transition-all cursor-pointer"
-                >
-                  <div className="flex items-center space-x-1.5 text-purple-400 font-bold text-[11px]">
-                    <Users className="w-3 h-3" />
-                    <span>Instructors</span>
-                  </div>
-                  <div className="text-[10px] text-slate-400">instructors@nibm.lk (pw: 123)</div>
-                </button>
-              )}
+              {/* Cadre Portal */}
+              <button
+                type="button"
+                onClick={() => handleQuickFill(generalInstructor)}
+                className="bg-slate-900/60 hover:bg-slate-700/60 border border-purple-600/30 hover:border-purple-500 p-2.5 rounded-xl text-left transition-all group cursor-pointer"
+              >
+                <div className="flex items-center space-x-1.5 mb-1">
+                  <div className="w-2 h-2 rounded-full bg-purple-400" />
+                  <span className="font-bold text-xs text-white group-hover:text-purple-300 truncate">
+                    Instructors
+                  </span>
+                </div>
+                <div className="text-[10px] text-slate-400">Cadre Portal</div>
+              </button>
             </div>
           </div>
         </div>
-
-        <p className="mt-4 text-center text-xs text-slate-500">
-          NIBM Technical Cadre Operational System • Password for all accounts: 123
-        </p>
       </div>
     </div>
   );

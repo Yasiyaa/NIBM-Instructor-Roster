@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { User, LeaveRequest } from '@/types';
-import { Clock, CheckCircle2, XCircle, AlertCircle, Check, X, ShieldAlert, MessageSquare } from 'lucide-react';
+import { Clock, Download } from 'lucide-react';
 import { reviewLeaveAction } from '@/lib/actions';
 
 interface LeaveManagementProps {
@@ -22,6 +22,53 @@ export const LeaveManagement: React.FC<LeaveManagementProps> = ({
   const [isProcessing, setIsProcessing] = useState(false);
 
   const canApprove = currentUser.role === 'DEMONSTRATOR' || currentUser.role === 'EXECUTIVE';
+
+  const handleExportLeaveCSV = () => {
+    const rows = [
+      [
+        'Leave ID',
+        'Instructor Name',
+        'Start Date',
+        'End Date',
+        'Duration (Days)',
+        'Reason',
+        'Status',
+        'Reviewed By',
+        'Review Comment',
+        'Requested At',
+      ],
+    ];
+
+    leaveRequests.forEach((l) => {
+      const d1 = new Date(l.startDate);
+      const d2 = new Date(l.endDate);
+      const days = Math.max(1, Math.round((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24)) + 1);
+
+      rows.push([
+        l.id,
+        `"${(l.instructorName || '').replace(/"/g, '""')}"`,
+        l.startDate,
+        l.endDate,
+        days.toString(),
+        `"${(l.reason || '').replace(/"/g, '""')}"`,
+        l.status,
+        `"${(l.reviewedByName || '-').replace(/"/g, '""')}"`,
+        `"${(l.reviewComment || '-').replace(/"/g, '""')}"`,
+        l.createdAt || '-',
+      ]);
+    });
+
+    const csvContent = rows.map((r) => r.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `NIBM_Leave_Records_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const filteredRequests = leaveRequests.filter((l) => {
     if (filter === 'ALL') return true;
@@ -101,7 +148,17 @@ export const LeaveManagement: React.FC<LeaveManagementProps> = ({
           <h3 className="font-bold text-slate-800 text-base">
             Applications Record ({filteredRequests.length})
           </h3>
-          <span className="text-xs text-slate-500">Sorted by submission date</span>
+          <div className="flex items-center space-x-3">
+            <span className="text-xs text-slate-500 hidden sm:inline">Sorted by submission date</span>
+            <button
+              onClick={handleExportLeaveCSV}
+              className="flex items-center space-x-1.5 text-xs font-semibold bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-lg transition-colors cursor-pointer"
+              title="Download Leave Records as CSV"
+            >
+              <Download className="w-3.5 h-3.5" />
+              <span>Export CSV</span>
+            </button>
+          </div>
         </div>
 
         {filteredRequests.length === 0 ? (
@@ -147,7 +204,7 @@ export const LeaveManagement: React.FC<LeaveManagementProps> = ({
                     {leave.reviewedByName && (
                       <div className="text-[11px] text-slate-500 mt-2">
                         Reviewed by <strong className="text-slate-700">{leave.reviewedByName}</strong>:{' '}
-                        <span className="italic">"{leave.reviewComment}"</span>
+                        <span className="italic">&ldquo;{leave.reviewComment}&rdquo;</span>
                       </div>
                     )}
                   </div>

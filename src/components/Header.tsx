@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
-import { User, Role } from '@/types';
-import { Shield, Calendar, Users, Clock, LogOut, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { User } from '@/types';
+import { Shield, Calendar, Users, Clock, LogOut, Settings } from 'lucide-react';
+import { ProfileModal } from './ProfileModal';
 
 interface HeaderProps {
   currentUser: User;
@@ -10,6 +11,7 @@ interface HeaderProps {
   activeTab: 'executive' | 'weekly' | 'planner' | 'instructor' | 'leaves';
   onSelectTab: (tab: 'executive' | 'weekly' | 'planner' | 'instructor' | 'leaves') => void;
   pendingLeavesCount: number;
+  onProfileUpdated?: (updated: Partial<User>) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -18,7 +20,9 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   onSelectTab,
   pendingLeavesCount,
+  onProfileUpdated,
 }) => {
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const isInstructor = currentUser.role === 'INSTRUCTOR';
   const isExecutive = currentUser.role === 'EXECUTIVE';
   const isDemonstrator = currentUser.role === 'DEMONSTRATOR';
@@ -49,22 +53,27 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
 
           {/* User Profile Badge & Logout Button */}
-          <div className="flex items-center space-x-3">
-            <div className="flex items-center space-x-2.5 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700">
+          <div className="flex items-center space-x-2 sm:space-x-3">
+            <button
+              onClick={() => setIsProfileOpen(true)}
+              className="flex items-center space-x-2.5 bg-slate-800/80 hover:bg-slate-700/80 px-3 py-1.5 rounded-xl border border-slate-700 hover:border-slate-600 transition-all text-left cursor-pointer group"
+              title="Click to view & update your profile or change password"
+            >
               <div
-                className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs text-white ${
+                className={`w-7 h-7 rounded-lg flex items-center justify-center font-bold text-xs text-white shadow-sm ${
                   isDemonstrator
-                    ? 'bg-emerald-600'
+                    ? 'bg-emerald-600 group-hover:bg-emerald-500'
                     : isExecutive
-                    ? 'bg-blue-600'
-                    : 'bg-purple-600'
-                }`}
+                    ? 'bg-blue-600 group-hover:bg-blue-500'
+                    : 'bg-purple-600 group-hover:bg-purple-500'
+                } transition-colors`}
               >
                 {currentUser.fullName.substring(0, 2).toUpperCase()}
               </div>
               <div className="text-left hidden sm:block">
-                <div className="text-xs font-bold text-white leading-tight">
-                  {currentUser.fullName}
+                <div className="text-xs font-bold text-white leading-tight flex items-center gap-1.5">
+                  <span>{currentUser.fullName}</span>
+                  <Settings className="w-3 h-3 text-slate-400 group-hover:text-slate-200 transition-colors" />
                 </div>
                 <div className="text-[10px] text-slate-400 font-medium">
                   {currentUser.role === 'DEMONSTRATOR' && 'Demonstrator (Roster Master)'}
@@ -72,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({
                   {currentUser.role === 'INSTRUCTOR' && 'Technical Instructor'}
                 </div>
               </div>
-            </div>
+            </button>
 
             {/* Logout Button */}
             <button
@@ -120,20 +129,18 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* TAB: ENTIRE WEEK MASTER SCHEDULE (Visible to Executive & Demonstrator) */}
-          {(isExecutive || isDemonstrator) && (
-            <button
-              onClick={() => onSelectTab('weekly')}
-              className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg font-semibold text-xs transition-all ${
-                activeTab === 'weekly'
-                  ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/50 shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
-              }`}
-            >
-              <Calendar className="w-4 h-4 text-indigo-400" />
-              <span>Entire Week Schedule</span>
-            </button>
-          )}
+          {/* TAB: ENTIRE WEEK MASTER SCHEDULE (Visible to all staff) */}
+          <button
+            onClick={() => onSelectTab('weekly')}
+            className={`flex items-center space-x-2 px-3.5 py-2 rounded-lg font-semibold text-xs transition-all ${
+              activeTab === 'weekly'
+                ? 'bg-indigo-600/30 text-indigo-300 border border-indigo-500/50 shadow-sm'
+                : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+            }`}
+          >
+            <Calendar className="w-4 h-4 text-indigo-400" />
+            <span>Entire Week Schedule</span>
+          </button>
 
           {/* TAB: SUNDAY PLANNING STUDIO (Visible ONLY to Yasith / Demonstrator) */}
           {isDemonstrator && (
@@ -171,6 +178,14 @@ export const Header: React.FC<HeaderProps> = ({
           )}
         </div>
       </div>
+
+      {/* Profile & Account Settings Modal */}
+      <ProfileModal
+        currentUser={currentUser}
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        onProfileUpdated={onProfileUpdated}
+      />
     </header>
   );
 };

@@ -2,10 +2,10 @@
   "users": [
     {
       "id": "user-yasith",
-      "fullName": "Yasith",
+      "fullName": "Yasith (You)",
       "email": "yasith@nibm.lk",
       "role": "DEMONSTRATOR",
-      "phone": "071 257 0137",
+      "phone": "+94 77 123 4567",
       "avatarColor": "bg-emerald-600",
       "isActive": true
     },
@@ -14,80 +14,80 @@
       "fullName": "Dr. Thisara",
       "email": "thisara@nibm.lk",
       "role": "EXECUTIVE",
-      "phone": "071 987 6543",
+      "phone": "+94 71 987 6543",
       "avatarColor": "bg-blue-700",
       "isActive": true
     },
     {
-      "id": "general-instructor",
-      "fullName": "Instructors Portal (General Access)",
-      "email": "instructors@nibm.lk",
-      "role": "INSTRUCTOR",
-      "phone": "011 268 5697",
-      "avatarColor": "bg-purple-600",
-      "isActive": true
-    },
-    {
       "id": "inst-1",
-      "fullName": "Nithara",
-      "email": "nithara@nibm.lk",
+      "fullName": "Ruwan Perera",
+      "email": "ruwan.p@nibm.lk",
       "role": "INSTRUCTOR",
-      "phone": "074 015 0405",
+      "phone": "+94 76 111 2233",
       "avatarColor": "bg-indigo-600",
       "isActive": true
     },
     {
       "id": "inst-2",
-      "fullName": "Nipun",
-      "email": "nipun@nibm.lk",
+      "fullName": "Chaminda Silva",
+      "email": "chaminda.s@nibm.lk",
       "role": "INSTRUCTOR",
-      "phone": "071 217 9220",
+      "phone": "+94 77 222 3344",
       "avatarColor": "bg-purple-600",
       "isActive": true
     },
     {
       "id": "inst-3",
-      "fullName": "Gimasha",
-      "email": "gimasha@nibm.lk",
+      "fullName": "Kavindi Fernando",
+      "email": "kavindi.f@nibm.lk",
       "role": "INSTRUCTOR",
-      "phone": "077 116 4048",
+      "phone": "+94 75 333 4455",
       "avatarColor": "bg-pink-600",
       "isActive": true
     },
     {
       "id": "inst-4",
-      "fullName": "Kithnuka",
-      "email": "kithnuka@nibm.lk",
+      "fullName": "Dilshan Wickramasinghe",
+      "email": "dilshan.w@nibm.lk",
       "role": "INSTRUCTOR",
-      "phone": "076 783 3449",
+      "phone": "+94 78 444 5566",
       "avatarColor": "bg-amber-600",
       "isActive": true
     },
     {
       "id": "inst-5",
-      "fullName": "Binal",
-      "email": "binal@nibm.lk",
+      "fullName": "Sanduni Jayawardena",
+      "email": "sanduni.j@nibm.lk",
       "role": "INSTRUCTOR",
-      "phone": "071 305 5035",
+      "phone": "+94 71 555 6677",
       "avatarColor": "bg-teal-600",
       "isActive": true
     },
     {
       "id": "inst-6",
-      "fullName": "Poorna",
-      "email": "poorna@nibm.lk",
+      "fullName": "Kasun Bandara",
+      "email": "kasun.b@nibm.lk",
       "role": "INSTRUCTOR",
-      "phone": "071 553 6337",
+      "phone": "+94 72 666 7788",
       "avatarColor": "bg-cyan-600",
       "isActive": true
     },
     {
       "id": "inst-7",
-      "fullName": "Supun",
-      "email": "supun@nibm.lk",
+      "fullName": "Nuwan Alwis",
+      "email": "nuwan.a@nibm.lk",
       "role": "INSTRUCTOR",
-      "phone": "075 792 2488",
+      "phone": "+94 70 777 8899",
       "avatarColor": "bg-orange-600",
+      "isActive": true
+    },
+    {
+      "id": "inst-8",
+      "fullName": "Sachini Rathnayake",
+      "email": "sachini.r@nibm.lk",
+      "role": "INSTRUCTOR",
+      "phone": "+94 76 888 9900",
+      "avatarColor": "bg-rose-600",
       "isActive": true
     }
   ],
@@ -96,13 +96,10 @@
       "id": "week-current",
       "startDate": "2026-09-14",
       "endDate": "2026-09-20",
-      "status": "DRAFT"
-    },
-    {
-      "id": "week-2026-09-20",
-      "startDate": "2026-09-20",
-      "endDate": "2026-09-26",
-      "status": "DRAFT"
+      "status": "PUBLISHED",
+      "publishedAt": "2026-09-17T08:17:59.494Z",
+      "publishedById": "user-yasith",
+      "publishedByName": "Yasith"
     },
     {
       "id": "week-2026-09-17",
@@ -111,131 +108,342 @@
       "status": "DRAFT"
     },
     {
-      "id": "week-2026-09-18",
-      "startDate": "2026-09-18",
-      "endDate": "2026-09-24",
+      "id": "week-2026-09-24",
+      "startDate": "2026-09-24",
+      "endDate": "2026-09-30",
+      "status": "DRAFT"
+    },
+    {
+      "id": "week-2026-09-20",
+      "startDate": "2026-09-20",
+      "endDate": "2026-09-26",
+      "status": "PUBLISHED",
+      "publishedAt": "2026-09-17T08:52:01.063Z",
+      "publishedById": "user-yasith",
+      "publishedByName": "Yasith (You)"
+    },
+    {
+      "id": "week-2026-09-13",
+      "startDate": "2026-09-13",
+      "endDate": "2026-09-19",
+      "status": "DRAFT"
+    },
+    {
+      "id": "week-2026-09-06",
+      "startDate": "2026-09-06",
+      "endDate": "2026-09-12",
       "status": "DRAFT"
     }
   ],
   "dutyAssignments": [
     {
-      "id": "assign-1789640756982-trgk",
-      "rosterWeekId": "week-2026-09-17",
-      "instructorId": "user-yasith",
-      "dutyDate": "2026-09-17",
-      "slotLabel": "Morning (09:00 - 12:00)",
-      "startTime": "09:00",
-      "endTime": "12:00",
-      "batchName": "DFCS26.3 / DFM 26.3",
-      "moduleName": "Computer system tute",
-      "roomLab": "Hall 10",
-      "instructorName": "Yasith"
-    },
-    {
-      "id": "assign-1789640757144-2hu7",
-      "rosterWeekId": "week-2026-09-17",
-      "instructorId": "user-yasith",
-      "dutyDate": "2026-09-17",
-      "slotLabel": "Afternoon (13:00 - 16:00)",
-      "startTime": "13:00",
-      "endTime": "16:00",
-      "batchName": "DFCS26.3 / DFM 26.3",
-      "moduleName": "Computer system tute",
-      "roomLab": "Hall 10",
-      "instructorName": "Yasith"
-    },
-    {
-      "id": "assign-1789640824630-9lad",
-      "rosterWeekId": "week-2026-09-17",
+      "id": "assign-1",
+      "rosterWeekId": "week-current",
       "instructorId": "inst-1",
-      "dutyDate": "2026-09-18",
+      "dutyDate": "2026-09-14",
       "slotLabel": "Morning (09:00 - 12:00)",
       "startTime": "09:00",
       "endTime": "12:00",
-      "batchName": "ADAM26.1",
-      "moduleName": "Introduction to photography",
-      "roomLab": "PC 5",
-      "instructorName": "Nithara"
+      "batchName": "DSE 24.1F",
+      "moduleName": "Database Management Systems",
+      "roomLab": "Lab 01"
     },
     {
-      "id": "assign-1789640824761-218f",
-      "rosterWeekId": "week-2026-09-17",
-      "instructorId": "inst-1",
-      "dutyDate": "2026-09-18",
-      "slotLabel": "Afternoon (13:00 - 16:00)",
-      "startTime": "13:00",
-      "endTime": "16:00",
-      "batchName": "ADAM26.1",
-      "moduleName": "Introduction to photography",
-      "roomLab": "PC 5",
-      "instructorName": "Nithara"
-    },
-    {
-      "id": "assign-1789640857300-q0v0",
-      "rosterWeekId": "week-2026-09-17",
-      "instructorId": "user-yasith",
-      "dutyDate": "2026-09-18",
-      "slotLabel": "Morning (09:00 - 12:00)",
-      "startTime": "09:00",
-      "endTime": "12:00",
-      "batchName": "DFCS26.3",
-      "moduleName": "Maths",
-      "roomLab": "LH1",
-      "instructorName": "Yasith"
-    },
-    {
-      "id": "assign-1789640857461-3p6p",
-      "rosterWeekId": "week-2026-09-17",
-      "instructorId": "user-yasith",
-      "dutyDate": "2026-09-18",
-      "slotLabel": "Afternoon (13:00 - 16:00)",
-      "startTime": "13:00",
-      "endTime": "16:00",
-      "batchName": "DFCS26.3",
-      "moduleName": "Maths",
-      "roomLab": "LH1",
-      "instructorName": "Yasith"
-    },
-    {
-      "id": "assign-1789640936717-3zcd",
-      "rosterWeekId": "week-2026-09-17",
+      "id": "assign-2",
+      "rosterWeekId": "week-current",
       "instructorId": "inst-2",
-      "dutyDate": "2026-09-18",
-      "slotLabel": "Morning (09:00 - 12:00)",
-      "startTime": "09:00",
-      "endTime": "12:00",
-      "batchName": "DNE25.3",
-      "moduleName": "OS Tute",
-      "roomLab": "",
-      "instructorName": "Nipun"
-    },
-    {
-      "id": "assign-1789640936878-pby1",
-      "rosterWeekId": "week-2026-09-17",
-      "instructorId": "inst-2",
-      "dutyDate": "2026-09-18",
+      "dutyDate": "2026-09-14",
       "slotLabel": "Afternoon (13:00 - 16:00)",
       "startTime": "13:00",
       "endTime": "16:00",
-      "batchName": "DNE25.3",
-      "moduleName": "OS Tute",
-      "roomLab": "",
-      "instructorName": "Nipun"
+      "batchName": "DCSD 24.1P",
+      "moduleName": "Object-Oriented Programming (Java)",
+      "roomLab": "Lab 03"
     },
     {
-      "id": "assign-1789641003602-qf61",
-      "rosterWeekId": "week-2026-09-17",
+      "id": "assign-3",
+      "rosterWeekId": "week-current",
+      "instructorId": "inst-3",
+      "dutyDate": "2026-09-15",
+      "slotLabel": "Morning (09:00 - 12:00)",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "batchName": "HDCN 23.2",
+      "moduleName": "Computer Networks & Routing",
+      "roomLab": "CISCO Lab"
+    },
+    {
+      "id": "assign-4",
+      "rosterWeekId": "week-current",
+      "instructorId": "inst-4",
+      "dutyDate": "2026-09-15",
+      "slotLabel": "Afternoon (13:00 - 16:00)",
+      "startTime": "13:00",
+      "endTime": "16:00",
+      "batchName": "DSE 24.1F",
+      "moduleName": "Data Structures & Algorithms",
+      "roomLab": "Lab 02"
+    },
+    {
+      "id": "assign-5",
+      "rosterWeekId": "week-current",
+      "instructorId": "inst-5",
+      "dutyDate": "2026-09-16",
+      "slotLabel": "Morning (09:00 - 12:00)",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "batchName": "DSE 23.2",
+      "moduleName": "Web Application Development",
+      "roomLab": "Lab 01"
+    },
+    {
+      "id": "assign-6",
+      "rosterWeekId": "week-current",
       "instructorId": "inst-6",
+      "dutyDate": "2026-09-16",
+      "slotLabel": "Afternoon (13:00 - 16:00)",
+      "startTime": "13:00",
+      "endTime": "16:00",
+      "batchName": "DCSD 24.1",
+      "moduleName": "Python for Data Science",
+      "roomLab": "Lab 04"
+    },
+    {
+      "id": "assign-7",
+      "rosterWeekId": "week-current",
+      "instructorId": "inst-7",
+      "dutyDate": "2026-09-17",
+      "slotLabel": "Morning (09:00 - 12:00)",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "batchName": "MIS 24.1",
+      "moduleName": "Enterprise Information Systems",
+      "roomLab": "Lab 02"
+    },
+    {
+      "id": "assign-8",
+      "rosterWeekId": "week-current",
+      "instructorId": "inst-8",
+      "dutyDate": "2026-09-17",
+      "slotLabel": "Afternoon (13:00 - 16:00)",
+      "startTime": "13:00",
+      "endTime": "16:00",
+      "batchName": "DSE 24.1F",
+      "moduleName": "Cloud Computing Essentials",
+      "roomLab": "Lab 03"
+    },
+    {
+      "id": "assign-9",
+      "rosterWeekId": "week-current",
+      "instructorId": "inst-1",
+      "dutyDate": "2026-09-18",
+      "slotLabel": "Morning (09:00 - 12:00)",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "batchName": "HDCN 23.2",
+      "moduleName": "Network Security Fundamentals",
+      "roomLab": "Lab 01"
+    },
+    {
+      "id": "assign-10",
+      "rosterWeekId": "week-current",
+      "instructorId": "inst-3",
       "dutyDate": "2026-09-20",
       "slotLabel": "Sunday CCS (16:30 - 17:30)",
       "startTime": "16:30",
       "endTime": "17:30",
-      "batchName": "CCS26.3",
-      "moduleName": "Database CW",
-      "roomLab": "",
-      "instructorName": "Poorna"
+      "batchName": "CCS Batch",
+      "moduleName": "Cyber Security Operations & Threat Defense",
+      "roomLab": "Main Auditorium Hall"
+    },
+    {
+      "id": "assign-1789634548935-yxwb",
+      "rosterWeekId": "week-current",
+      "instructorId": "inst-1",
+      "dutyDate": "2026-09-14",
+      "slotLabel": "Afternoon (13:00 - 16:00)",
+      "startTime": "13:00",
+      "endTime": "16:00",
+      "batchName": "DSE 24.1F",
+      "moduleName": "Database Management Systems",
+      "roomLab": "Lab 01",
+      "instructorName": "Ruwan Perera"
+    },
+    {
+      "id": "assign-1789635004906-eru4",
+      "rosterWeekId": "week-current",
+      "instructorId": "inst-2",
+      "dutyDate": "2026-09-14",
+      "slotLabel": "Morning (09:00 - 12:00)",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "batchName": "DCSD 24.1P",
+      "moduleName": "Object-Oriented Programming (Java)",
+      "roomLab": "Lab 03",
+      "instructorName": "Chaminda Silva"
+    },
+    {
+      "id": "assign-1789638315060-btjx",
+      "rosterWeekId": "week-2026-09-20",
+      "instructorId": "inst-8",
+      "dutyDate": "2026-09-21",
+      "slotLabel": "Morning (09:00 - 12:00)",
+      "startTime": "09:00",
+      "endTime": "12:00",
+      "batchName": "DSE 24.1F",
+      "moduleName": "Database Management Systems",
+      "roomLab": "Lab 02",
+      "instructorName": "Sachini Rathnayake"
+    },
+    {
+      "id": "assign-1789638315342-hz40",
+      "rosterWeekId": "week-2026-09-20",
+      "instructorId": "inst-8",
+      "dutyDate": "2026-09-21",
+      "slotLabel": "Afternoon (13:00 - 16:00)",
+      "startTime": "13:00",
+      "endTime": "16:00",
+      "batchName": "DSE 24.1F",
+      "moduleName": "Database Management Systems",
+      "roomLab": "Lab 02",
+      "instructorName": "Sachini Rathnayake"
     }
   ],
-  "nightShifts": [],
-  "leaveRequests": []
+  "nightShifts": [
+    {
+      "id": "ns-1",
+      "rosterWeekId": "week-current",
+      "instructorId": "inst-1",
+      "shiftDate": "2026-09-14"
+    },
+    {
+      "id": "ns-2",
+      "rosterWeekId": "week-current",
+      "instructorId": "inst-2",
+      "shiftDate": "2026-09-15"
+    },
+    {
+      "id": "ns-3",
+      "rosterWeekId": "week-current",
+      "instructorId": "inst-3",
+      "shiftDate": "2026-09-16"
+    },
+    {
+      "id": "ns-4",
+      "rosterWeekId": "week-current",
+      "instructorId": "inst-4",
+      "shiftDate": "2026-09-17"
+    },
+    {
+      "id": "ns-5",
+      "rosterWeekId": "week-current",
+      "instructorId": "inst-5",
+      "shiftDate": "2026-09-18"
+    },
+    {
+      "id": "ns-6",
+      "rosterWeekId": "week-current",
+      "instructorId": "inst-6",
+      "shiftDate": "2026-09-19"
+    },
+    {
+      "id": "ns-7",
+      "rosterWeekId": "week-current",
+      "instructorId": "inst-7",
+      "shiftDate": "2026-09-20"
+    },
+    {
+      "id": "ns-1789633079500",
+      "rosterWeekId": "week-test",
+      "instructorId": "inst-3",
+      "shiftDate": "2026-09-25",
+      "notes": "Caretaker",
+      "instructorName": "Kavindi Fernando"
+    },
+    {
+      "id": "ns-1789638321010",
+      "rosterWeekId": "week-2026-09-20",
+      "instructorId": "inst-4",
+      "shiftDate": "2026-09-21",
+      "instructorName": "Dilshan Wickramasinghe"
+    },
+    {
+      "id": "ns-1789704714689",
+      "rosterWeekId": "week-test",
+      "instructorId": "inst-3",
+      "shiftDate": "2030-05-16",
+      "notes": "Caretaker",
+      "instructorName": "Kavindi Fernando"
+    }
+  ],
+  "leaveRequests": [
+    {
+      "id": "leave-1",
+      "instructorId": "inst-8",
+      "startDate": "2026-09-18",
+      "endDate": "2026-09-18",
+      "reason": "Family event / Personal matter",
+      "status": "APPROVED",
+      "reviewedById": "user-yasith",
+      "reviewedByName": "Yasith",
+      "reviewedAt": "2026-09-17T08:17:59.494Z",
+      "reviewComment": "Approved. Lab coverage handled by Ruwan.",
+      "createdAt": "2026-09-17T08:17:59.494Z"
+    },
+    {
+      "id": "leave-2",
+      "instructorId": "inst-5",
+      "startDate": "2026-09-19",
+      "endDate": "2026-09-19",
+      "reason": "Medical appointment",
+      "status": "APPROVED",
+      "createdAt": "2026-09-17T08:17:59.494Z",
+      "reviewedById": "user-yasith",
+      "reviewedByName": "Yasith (You)",
+      "reviewedAt": "2026-09-17T08:24:18.381Z",
+      "reviewComment": "Approved"
+    },
+    {
+      "id": "leave-1789633079498",
+      "instructorId": "inst-2",
+      "instructorName": "Chaminda Silva",
+      "startDate": "2026-09-25",
+      "endDate": "2026-09-25",
+      "reason": "Doctor appointment",
+      "status": "APPROVED",
+      "createdAt": "2026-09-17T08:17:59.498Z",
+      "reviewedById": "user-yasith",
+      "reviewedByName": "Yasith (You)",
+      "reviewedAt": "2026-09-17T08:17:59.499Z",
+      "reviewComment": "Approved for health reason"
+    },
+    {
+      "id": "leave-1789633440756",
+      "instructorId": "inst-2",
+      "instructorName": "Chaminda Silva",
+      "startDate": "2026-09-18",
+      "endDate": "2026-09-18",
+      "reason": "asd",
+      "status": "REJECTED",
+      "createdAt": "2026-09-17T08:24:00.756Z",
+      "reviewedById": "user-yasith",
+      "reviewedByName": "Yasith (You)",
+      "reviewedAt": "2026-09-17T08:24:15.362Z",
+      "reviewComment": "Rejected"
+    },
+    {
+      "id": "leave-1789704714683",
+      "instructorId": "inst-2",
+      "instructorName": "Chaminda Silva",
+      "startDate": "2030-05-16",
+      "endDate": "2030-05-16",
+      "reason": "Doctor appointment",
+      "status": "APPROVED",
+      "createdAt": "2026-09-18T04:11:54.683Z",
+      "reviewedById": "user-yasith",
+      "reviewedByName": "Yasith (You)",
+      "reviewedAt": "2026-09-18T04:11:54.686Z",
+      "reviewComment": "Approved for health reason"
+    }
+  ]
 }

@@ -19,10 +19,8 @@ import {
   MapPin,
   Check,
   X,
-  UserCheck,
-  Layers,
   Users,
-  Phone,
+  Loader2,
 } from 'lucide-react';
 import { reviewLeaveAction, getExecutiveReportAction } from '@/lib/actions';
 import { WeeklyScheduleView } from '@/components/WeeklyScheduleView';
@@ -167,11 +165,12 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
               <Shield className="w-4 h-4" />
               <span>Executive Operational Cockpit • Dr. Thisara</span>
             </div>
-            <h2 className="text-2xl font-black tracking-tight text-white">
-              Daily Instructor Deployment & Readiness
+            <h2 className="text-2xl font-black tracking-tight text-white flex items-center space-x-2">
+              <span>Daily Instructor Deployment & Readiness</span>
+              {loading && <Loader2 className="w-5 h-5 animate-spin text-blue-400 inline-block" />}
             </h2>
             <p className="text-slate-300 text-sm mt-1 max-w-2xl">
-              Live situational intelligence on the 8-member instructor cadre. Real-time visibility into who is actively teaching, who is free on standby for ad-hoc allocations, and who is on leave.
+              Live situational intelligence for <span className="text-blue-300 font-semibold">{formattedDate} ({dayOfWeek})</span>. Real-time visibility into who is actively teaching, who is free on standby for ad-hoc allocations, and who is on leave.
             </p>
           </div>
 
@@ -281,48 +280,53 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
       </div>
 
       {/* Tonight's Night Duty Callout Banner */}
-      <div className="bg-indigo-900 text-white rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border border-indigo-800 shadow-md">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-lg bg-indigo-800 flex items-center justify-center text-amber-300">
-            <Moon className="w-5 h-5" />
+      <div className="bg-indigo-900 text-white rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 border border-indigo-800 shadow-lg">
+        <div className="flex items-center space-x-4">
+          <div className="w-12 h-12 rounded-xl bg-indigo-800/90 flex items-center justify-center text-amber-300 shadow-inner shrink-0">
+            <Moon className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center space-x-2">
               <span className="text-xs font-bold uppercase tracking-wider text-indigo-300">
                 Night Shift Roster ({dayOfWeek} Night)
               </span>
-              <span className="text-[10px] bg-indigo-700 text-indigo-200 px-1.5 py-0.5 rounded font-semibold">
-                7-Day Rotation
+              <span className="text-[10px] bg-indigo-700 text-indigo-200 px-2 py-0.5 rounded font-semibold">
+                7-Day Campus Care
               </span>
             </div>
-            <div className="text-base font-bold text-white mt-0.5 flex flex-wrap items-center gap-2">
+            <div className="text-base sm:text-lg font-bold text-white mt-1">
               {report.nightDutyInstructor ? (
-                <>
-                  <span>
-                    Designated Officer: <span className="text-amber-300">{report.nightDutyInstructor.fullName}</span>
-                  </span>
-                  {report.nightDutyInstructor.phone && (
-                    <a
-                      href={`tel:${report.nightDutyInstructor.phone.replace(/\s+/g, '')}`}
-                      className="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-2.5 py-1 rounded-lg transition-colors shadow-sm cursor-pointer ml-1"
-                      title={`Call ${report.nightDutyInstructor.fullName}`}
-                    >
-                      <Phone className="w-3.5 h-3.5" />
-                      <span>Call: {report.nightDutyInstructor.phone}</span>
-                    </a>
-                  )}
-                </>
+                <div className="flex items-center flex-wrap gap-2">
+                  <span>Designated Officer:</span>
+                  <span className="text-amber-300 font-extrabold">{report.nightDutyInstructor.fullName}</span>
+                  <span className="text-indigo-200 text-sm">({report.nightDutyInstructor.phone || 'No phone recorded'})</span>
+                </div>
               ) : (
-                <span className="text-amber-200 italic font-normal">
+                <span className="text-amber-200 italic font-normal text-sm">
                   No night shift assigned for this date yet.
                 </span>
               )}
             </div>
           </div>
         </div>
-        <div className="text-xs text-indigo-200 sm:text-right">
-          Overnight Campus & Lab Caretaker Duty
-        </div>
+        {report.nightDutyInstructor?.phone && (
+          <div className="flex items-center space-x-2 shrink-0">
+            <a
+              href={`tel:${report.nightDutyInstructor.phone.replace(/\s+/g, '')}`}
+              className="flex items-center space-x-1 text-xs font-bold bg-indigo-800 hover:bg-indigo-700 text-white px-3 py-2 rounded-xl transition-all border border-indigo-700"
+            >
+              <span>Call Officer</span>
+            </a>
+            <a
+              href={`https://wa.me/94${report.nightDutyInstructor.phone.replace(/\D/g, '').replace(/^0/, '')}?text=Hello%20${encodeURIComponent(report.nightDutyInstructor.fullName)},%20NIBM%20School%20of%20Computing%20Night%20Duty%20Check-in.`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center space-x-1.5 text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-2 rounded-xl transition-all shadow-md active:scale-95"
+            >
+              <span>WhatsApp</span>
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Main 3-Column Operational Cockpit */}
@@ -353,19 +357,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                   className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 hover:border-emerald-300 transition-colors shadow-xs"
                 >
                   <div className="flex items-center justify-between mb-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-900 text-sm">{instructor.fullName}</span>
-                      {instructor.phone && (
-                        <a
-                          href={`tel:${instructor.phone.replace(/\s+/g, '')}`}
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-800 bg-emerald-100 hover:bg-emerald-200 px-2 py-0.5 rounded transition-colors cursor-pointer"
-                          title={`Call ${instructor.fullName} (${instructor.phone})`}
-                        >
-                          <Phone className="w-2.5 h-2.5" />
-                          <span>Call</span>
-                        </a>
-                      )}
-                    </div>
+                    <span className="font-bold text-slate-900 text-sm">{instructor.fullName}</span>
                     <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded">
                       {assignment.startTime} - {assignment.endTime}
                     </span>
@@ -416,7 +408,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
               report.freeStandby.map((instructor) => (
                 <div
                   key={instructor.id}
-                  className="bg-amber-50/40 rounded-xl p-3.5 border border-amber-200/80 flex items-center justify-between gap-2"
+                  className="bg-amber-50/40 rounded-xl p-3.5 border border-amber-200/80 flex items-center justify-between"
                 >
                   <div className="flex items-center space-x-3">
                     <div className="w-8 h-8 rounded-full bg-amber-200 text-amber-900 font-bold flex items-center justify-center text-xs">
@@ -429,21 +421,9 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {instructor.phone && (
-                      <a
-                        href={`tel:${instructor.phone.replace(/\s+/g, '')}`}
-                        className="inline-flex items-center gap-1 text-xs font-bold text-emerald-800 hover:text-white bg-emerald-100 hover:bg-emerald-600 border border-emerald-300 px-2.5 py-1 rounded-lg transition-all cursor-pointer shadow-2xs"
-                        title={`Call ${instructor.fullName} directly`}
-                      >
-                        <Phone className="w-3 h-3" />
-                        <span>Call</span>
-                      </a>
-                    )}
-                    <span className="text-[10px] font-bold bg-amber-200/80 text-amber-900 px-2 py-1 rounded-full uppercase">
-                      Ready
-                    </span>
-                  </div>
+                  <span className="text-[10px] font-bold bg-amber-200/80 text-amber-900 px-2 py-1 rounded-full uppercase">
+                    Ready
+                  </span>
                 </div>
               ))
             )}
@@ -479,24 +459,12 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                   className="bg-rose-50/50 rounded-xl p-3.5 border border-rose-200"
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold text-slate-800 text-sm">{instructor.fullName}</span>
-                      {instructor.phone && (
-                        <a
-                          href={`tel:${instructor.phone.replace(/\s+/g, '')}`}
-                          className="inline-flex items-center gap-1 text-[10px] font-semibold text-slate-600 hover:text-slate-900 bg-slate-100 hover:bg-slate-200 px-2 py-0.5 rounded border border-slate-200 transition-colors"
-                          title={`Call ${instructor.fullName}`}
-                        >
-                          <Phone className="w-2.5 h-2.5" />
-                          <span>Call</span>
-                        </a>
-                      )}
-                    </div>
+                    <span className="font-semibold text-slate-800 text-sm">{instructor.fullName}</span>
                     <span className="text-[10px] font-bold bg-rose-200 text-rose-800 px-2 py-0.5 rounded-full uppercase">
                       Leave
                     </span>
                   </div>
-                  <p className="text-xs text-slate-600 italic">&quot;{leave.reason}&quot;</p>
+                  <p className="text-xs text-slate-600 italic">&ldquo;{leave.reason}&rdquo;</p>
                   <div className="text-[10px] text-slate-600 mt-2 flex items-center justify-between">
                     <span>
                       Duration: {leave.startDate} to {leave.endDate}

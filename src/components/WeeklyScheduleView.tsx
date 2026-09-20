@@ -19,7 +19,8 @@ import {
   AlertCircle,
   Sparkles,
   ExternalLink,
-  Phone,
+  RefreshCw,
+  Download,
 } from 'lucide-react';
 
 interface WeeklyScheduleViewProps {
@@ -45,16 +46,13 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
   onWeekChange,
   onSelectDateForCockpit,
 }) => {
-  const [planningStartDate, setPlanningStartDate] = useState<string>(rosterWeek.startDate);
+  const [userSelectedStartDate, setUserSelectedStartDate] = useState<string | null>(null);
+  const planningStartDate = userSelectedStartDate ?? rosterWeek.startDate;
   const [selectedInstructorId, setSelectedInstructorId] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  React.useEffect(() => {
-    setPlanningStartDate(rosterWeek.startDate);
-  }, [rosterWeek.startDate]);
-
   const handleDateChange = (newDateStr: string) => {
-    setPlanningStartDate(newDateStr);
+    setUserSelectedStartDate(newDateStr);
     onWeekChange?.(newDateStr);
   };
 
@@ -229,6 +227,47 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
     window.print();
   };
 
+  const handleExportCSV = () => {
+    const rows = [
+      ['Date', 'Day', 'Time Slot', 'Module Name', 'Batch', 'Instructor', 'Room / Lab', 'Night Shift Officer']
+    ];
+
+    weekDays.forEach((day) => {
+      const dayDuties = filteredAssignments.filter((a) => a.dutyDate === day.dateStr);
+      const nightShift = nightShifts.find((s) => s.shiftDate === day.dateStr);
+      const nightInstructor = nightShift ? allInstructors.find((i) => i.id === nightShift.instructorId) : null;
+      const nightOfficerName = nightInstructor ? nightInstructor.fullName : 'Not Assigned';
+
+      if (dayDuties.length === 0) {
+        rows.push([day.dateStr, day.dayName, 'No scheduled sessions', '-', '-', '-', '-', nightOfficerName]);
+      } else {
+        dayDuties.forEach((duty) => {
+          rows.push([
+            day.dateStr,
+            day.dayName,
+            duty.slotLabel || `${duty.startTime} - ${duty.endTime}`,
+            `"${(duty.moduleName || '').replace(/"/g, '""')}"`,
+            `"${(duty.batchName || '').replace(/"/g, '""')}"`,
+            `"${(duty.instructorName || '').replace(/"/g, '""')}"`,
+            `"${(duty.roomLab || '').replace(/"/g, '""')}"`,
+            `"${nightOfficerName.replace(/"/g, '""')}"`,
+          ]);
+        });
+      }
+    });
+
+    const csvContent = rows.map((r) => r.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `NIBM_Timetable_${planningStartDate}_to_${weekEndDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
       {/* Top Banner & Week Controller */}
@@ -237,7 +276,13 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
           <div>
             <div className="flex items-center space-x-2 text-blue-400 text-sm font-medium mb-1">
               <Shield className="w-4 h-4" />
-              <span>Executive Weekly Overview • Dr. Thisara</span>
+              <span>
+                {currentUser.role === 'EXECUTIVE'
+                  ? `Executive Weekly Overview • ${currentUser.fullName}`
+                  : currentUser.role === 'DEMONSTRATOR'
+                  ? `Demonstrator Master Overview • ${currentUser.fullName}`
+                  : `Departmental Timetable • ${currentUser.fullName}`}
+              </span>
             </div>
             <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
               <span>Full-Week Master Schedule</span>
@@ -271,6 +316,26 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                 </div>
               </div>
             </div>
+
+            {onRefresh && (
+              <button
+                onClick={() => onRefresh()}
+                className="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-3 py-2.5 rounded-xl border border-slate-700 text-xs font-semibold transition-all cursor-pointer shadow-sm"
+                title="Refresh Schedule"
+              >
+                <RefreshCw className="w-3.5 h-3.5 text-blue-400" />
+                <span>Refresh</span>
+              </button>
+            )}
+
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center space-x-1.5 bg-emerald-700/80 hover:bg-emerald-600 text-white px-3.5 py-2.5 rounded-xl border border-emerald-600/60 text-xs font-semibold transition-all cursor-pointer shadow-sm"
+              title="Export Roster as CSV Spreadsheet"
+            >
+              <Download className="w-4 h-4 text-emerald-300" />
+              <span>Export CSV</span>
+            </button>
 
             <button
               onClick={handlePrint}
@@ -378,7 +443,7 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
         <h1 className="text-xl font-black text-slate-900">National Institute of Business Management (NIBM)</h1>
         <h2 className="text-base font-bold text-slate-700">School of Computing — Instructor Duty Roster</h2>
         <p className="text-xs text-slate-600">
-          Week: {planningStartDate} to {weekEndDate} | Status: {rosterWeek.status} | Generated for Dr. Thisara
+          Week: {planningStartDate} to {weekEndDate} | Status: {rosterWeek.status} | Generated for {currentUser.fullName} ({currentUser.role})
         </p>
       </div>
 
@@ -695,14 +760,7 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                         )}
                       </div>
                       {nightInstructor?.phone && (
-                        <a
-                          href={`tel:${nightInstructor.phone.replace(/\s+/g, '')}`}
-                          className="inline-flex items-center gap-1 text-[10px] text-amber-300 hover:text-white mt-1 bg-indigo-900/80 hover:bg-indigo-800 px-2 py-0.5 rounded font-bold transition-colors cursor-pointer"
-                          title={`Call ${nightInstructor.fullName}`}
-                        >
-                          <Phone className="w-2.5 h-2.5" />
-                          <span>Call: {nightInstructor.phone}</span>
-                        </a>
+                        <div className="text-[10px] text-indigo-200">{nightInstructor.phone}</div>
                       )}
                     </div>
 
@@ -810,18 +868,7 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                         </div>
                         <div>
                           <div className="font-bold text-slate-900">{item.instructor.fullName}</div>
-                          {item.instructor.phone ? (
-                            <a
-                              href={`tel:${item.instructor.phone.replace(/\s+/g, '')}`}
-                              className="inline-flex items-center gap-1 text-[10px] text-emerald-700 hover:text-emerald-900 font-semibold hover:underline"
-                              title={`Call ${item.instructor.fullName}`}
-                            >
-                              <Phone className="w-2.5 h-2.5 text-emerald-600" />
-                              <span>{item.instructor.phone}</span>
-                            </a>
-                          ) : (
-                            <div className="text-[10px] text-slate-600">{item.instructor.email}</div>
-                          )}
+                          <div className="text-[10px] text-slate-600">{item.instructor.phone || item.instructor.email}</div>
                         </div>
                       </div>
                     </td>

@@ -1,5 +1,4 @@
-import fs from 'fs';
-import path from 'path';
+import { prisma } from './db';
 import {
   User,
   RosterWeek,
@@ -7,155 +6,187 @@ import {
   NightShift,
   LeaveRequest,
   ExecutiveStatusReport,
+  Role,
 } from '@/types';
 import {
-  INITIAL_USERS,
-  INITIAL_ROSTER_WEEKS,
-  INITIAL_ASSIGNMENTS,
-  INITIAL_NIGHT_SHIFTS,
-  INITIAL_LEAVES,
-  CURRENT_MONDAY,
-  CURRENT_SUNDAY,
   getMondayOfCurrentWeek,
   getSundayOfWeek,
 } from './seed-data';
 
-interface DatabaseState {
-  users: User[];
-  rosterWeeks: RosterWeek[];
-  dutyAssignments: DutyAssignment[];
-  nightShifts: NightShift[];
-  leaveRequests: LeaveRequest[];
-}
-
-const DATA_DIR = path.join(process.cwd(), 'data');
-const DB_FILE = path.join(DATA_DIR, 'roster-store.json');
-
-// In-memory cache
-let stateCache: DatabaseState | null = null;
-
-function loadState(): DatabaseState {
-  if (stateCache) return stateCache;
-
-  try {
-    if (fs.existsSync(DB_FILE)) {
-      const content = fs.readFileSync(DB_FILE, 'utf8');
-      stateCache = JSON.parse(content);
-      return stateCache!;
-    }
-  } catch (err) {
-    console.warn('Could not read persistent file, falling back to seed state:', err);
-  }
-
-  // Initial seed
-  stateCache = {
-    users: [...INITIAL_USERS],
-    rosterWeeks: [...INITIAL_ROSTER_WEEKS],
-    dutyAssignments: [...INITIAL_ASSIGNMENTS],
-    nightShifts: [...INITIAL_NIGHT_SHIFTS],
-    leaveRequests: [...INITIAL_LEAVES],
-  };
-
-  saveState(stateCache);
-  return stateCache;
-}
-
-function saveState(state: DatabaseState): void {
-  stateCache = state;
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    fs.writeFileSync(DB_FILE, JSON.stringify(state, null, 2), 'utf8');
-  } catch (err) {
-    console.error('Failed to write to database file:', err);
-  }
-}
-
 // ----------------------------------------------------
 // Users & Roles
 // ----------------------------------------------------
-export function getAllUsers(): User[] {
-  const state = loadState();
-  return state.users.filter((u) => u.isActive);
+export async function getAllUsers(): Promise<User[]> {
+  const users = await prisma.user.findMany({
+    where: { isActive: true },
+    orderBy: { fullName: 'asc' },
+  });
+  return users.map((u) => ({
+    id: u.id,
+    fullName: u.fullName,
+    email: u.email,
+    role: u.role as Role,
+    phone: u.phone || undefined,
+    avatarColor: u.avatarColor || undefined,
+    isActive: u.isActive,
+  }));
 }
 
-export function getInstructors(): User[] {
-  return getAllUsers().filter(
+export async function getInstructors(): Promise<User[]> {
+  const all = await getAllUsers();
+  return all.filter(
     (u) => (u.role === 'INSTRUCTOR' || u.role === 'DEMONSTRATOR') && u.id !== 'general-instructor'
   );
 }
 
-export function getUserById(id: string): User | undefined {
-  return getAllUsers().find((u) => u.id === id);
+export async function getUserById(id: string): Promise<User | null> {
+  const u = await prisma.user.findUnique({ where: { id } });
+  if (!u) return null;
+  return {
+    id: u.id,
+    fullName: u.fullName,
+    email: u.email,
+    role: u.role as Role,
+    phone: u.phone || undefined,
+    avatarColor: u.avatarColor || undefined,
+    isActive: u.isActive,
+  };
 }
 
 // ----------------------------------------------------
 // Roster Weeks
 // ----------------------------------------------------
-export function getOrCreateRosterWeek(startDateStr?: string): RosterWeek {
-  const state = loadState();
+export async function getOrCreateRosterWeek(startDateStr?: string): Promise<RosterWeek> {
   const start = startDateStr || getMondayOfCurrentWeek();
   const end = getSundayOfWeek(start);
 
-  let week = state.rosterWeeks.find((w) => w.startDate === start);
+  let week = await prisma.rosterWeek.findUnique({
+    where: {
+      startDate_endDate: {
+        startDate: start,
+        endDate: end,
+      },
+    },
+    include: { publishedBy: true },
+  });
+
   if (!week) {
-    week = {
-      id: `week-${start}`,
-      startDate: start,
-      endDate: end,
-      status: 'DRAFT',
-    };
-    state.rosterWeeks.push(week);
-    saveState(state);
+    week = await prisma.rosterWeek.create({
+      data: {
+        id: `week-${start}`,
+        startDate: start,
+        endDate: end,
+        status: 'DRAFT',
+      },
+      include: { publishedBy: true },
+    });
   }
-  return week;
-}
 
-export function getAllRosterWeeks(): RosterWeek[] {
-  return loadState().rosterWeeks;
-}
-
-export function publishRosterWeek(weekId: string, publishedById: string): RosterWeek {
-  const state = loadState();
-  const weekIndex = state.rosterWeeks.findIndex((w) => w.id === weekId);
-  if (weekIndex === -1) throw new Error('Roster week not found');
-
-  const publisher = getUserById(publishedById);
-  const updated: RosterWeek = {
-    ...state.rosterWeeks[weekIndex],
-    status: 'PUBLISHED',
-    publishedAt: new Date().toISOString(),
-    publishedById,
-    publishedByName: publisher?.fullName || 'Demonstrator',
+  return {
+    id: week.id,
+    startDate: week.startDate,
+    endDate: week.endDate,
+    status: week.status,
+    publishedAt: week.publishedAt ? week.publishedAt.toISOString() : undefined,
+    publishedById: week.publishedById || undefined,
+    publishedByName: week.publishedBy?.fullName || undefined,
   };
+}
 
-  state.rosterWeeks[weekIndex] = updated;
-  saveState(state);
-  return updated;
+export async function getAllRosterWeeks(): Promise<RosterWeek[]> {
+  const weeks = await prisma.rosterWeek.findMany({
+    orderBy: { startDate: 'desc' },
+    include: { publishedBy: true },
+  });
+
+  return weeks.map((w) => ({
+    id: w.id,
+    startDate: w.startDate,
+    endDate: w.endDate,
+    status: w.status,
+    publishedAt: w.publishedAt ? w.publishedAt.toISOString() : undefined,
+    publishedById: w.publishedById || undefined,
+    publishedByName: w.publishedBy?.fullName || undefined,
+  }));
+}
+
+export async function publishRosterWeek(weekId: string, publishedById: string): Promise<RosterWeek> {
+  const publisher = await getUserById(publishedById);
+  const updated = await prisma.rosterWeek.update({
+    where: { id: weekId },
+    data: {
+      status: 'PUBLISHED',
+      publishedAt: new Date(),
+      publishedById,
+    },
+    include: { publishedBy: true },
+  });
+
+  await prisma.auditLog.create({
+    data: {
+      userId: publishedById,
+      action: 'PUBLISH_ROSTER',
+      targetEntity: 'RosterWeek',
+      targetId: weekId,
+      metadata: `Published week ${updated.startDate} to ${updated.endDate}`,
+    },
+  });
+
+  return {
+    id: updated.id,
+    startDate: updated.startDate,
+    endDate: updated.endDate,
+    status: updated.status,
+    publishedAt: updated.publishedAt ? updated.publishedAt.toISOString() : undefined,
+    publishedById: updated.publishedById || undefined,
+    publishedByName: updated.publishedBy?.fullName || publisher?.fullName || 'Demonstrator',
+  };
 }
 
 // ----------------------------------------------------
 // Duty Assignments
 // ----------------------------------------------------
-export function getDutyAssignments(weekId?: string): DutyAssignment[] {
-  const state = loadState();
-  const week = weekId ? state.rosterWeeks.find((w) => w.id === weekId) : undefined;
-  const assignments = weekId
-    ? state.dutyAssignments.filter(
-        (a) => a.rosterWeekId === weekId || (week && a.dutyDate >= week.startDate && a.dutyDate <= week.endDate)
-      )
-    : state.dutyAssignments;
+export async function getDutyAssignments(weekId?: string): Promise<DutyAssignment[]> {
+  let where = {};
+  if (weekId) {
+    const week = await prisma.rosterWeek.findUnique({ where: { id: weekId } });
+    if (week) {
+      where = {
+        OR: [
+          { rosterWeekId: weekId },
+          {
+            AND: [
+              { dutyDate: { gte: week.startDate } },
+              { dutyDate: { lte: week.endDate } },
+            ],
+          },
+        ],
+      };
+    } else {
+      where = { rosterWeekId: weekId };
+    }
+  }
 
-  // Enrich with instructor name and phone
-  return assignments.map((a) => {
-    const inst = getUserById(a.instructorId);
-    return {
-      ...a,
-      instructorName: inst?.fullName || 'Unassigned',
-      instructorPhone: inst?.phone,
-    };
+  const assignments = await prisma.dutyAssignment.findMany({
+    where,
+    include: { instructor: true },
+    orderBy: [{ dutyDate: 'asc' }, { startTime: 'asc' }],
   });
+
+  return assignments.map((a) => ({
+    id: a.id,
+    rosterWeekId: a.rosterWeekId,
+    instructorId: a.instructorId,
+    instructorName: a.instructor.fullName,
+    dutyDate: a.dutyDate,
+    slotLabel: a.slotLabel,
+    startTime: a.startTime,
+    endTime: a.endTime,
+    batchName: a.batchName,
+    moduleName: a.moduleName,
+    roomLab: a.roomLab || undefined,
+    notes: a.notes || undefined,
+  }));
 }
 
 export interface AddDutyInput {
@@ -171,222 +202,377 @@ export interface AddDutyInput {
   notes?: string;
 }
 
-export function addDutyAssignment(input: AddDutyInput): { success: boolean; assignment?: DutyAssignment; error?: string } {
-  const state = loadState();
+export async function addDutyAssignment(
+  input: AddDutyInput
+): Promise<{ success: boolean; assignment?: DutyAssignment; error?: string }> {
+  // 1. Leave Precedence Rule: Check if on approved leave
+  const approvedLeave = await prisma.leaveRequest.findFirst({
+    where: {
+      instructorId: input.instructorId,
+      status: 'APPROVED',
+      startDate: { lte: input.dutyDate },
+      endDate: { gte: input.dutyDate },
+    },
+    include: { instructor: true },
+  });
 
-  // 1. Check Leave Precedence Rule
-  const hasApprovedLeave = state.leaveRequests.some(
-    (l) =>
-      l.instructorId === input.instructorId &&
-      l.status === 'APPROVED' &&
-      input.dutyDate >= l.startDate &&
-      input.dutyDate <= l.endDate
-  );
-  if (hasApprovedLeave) {
-    const instructor = getUserById(input.instructorId);
+  if (approvedLeave) {
     return {
       success: false,
-      error: `Conflict: ${instructor?.fullName || 'Instructor'} is on approved leave on ${input.dutyDate}.`,
+      error: `Conflict: ${approvedLeave.instructor?.fullName || 'Instructor'} is on approved leave on ${input.dutyDate}.`,
     };
   }
 
-  // 2. Check Collision Rule: instructor already booked for this slot
-  const collision = state.dutyAssignments.some(
-    (a) =>
-      a.dutyDate === input.dutyDate &&
-      a.instructorId === input.instructorId &&
-      a.startTime === input.startTime
-  );
+  // 2. Collision Rule: Double Booking check
+  const collision = await prisma.dutyAssignment.findFirst({
+    where: {
+      dutyDate: input.dutyDate,
+      startTime: input.startTime,
+      instructorId: input.instructorId,
+    },
+    include: { instructor: true },
+  });
+
   if (collision) {
-    const instructor = getUserById(input.instructorId);
     return {
       success: false,
-      error: `Double Booking: ${instructor?.fullName || 'Instructor'} is already assigned to a session at ${input.startTime} on ${input.dutyDate}.`,
+      error: `Double Booking: ${collision.instructor?.fullName || 'Instructor'} is already assigned to a session at ${input.startTime} on ${input.dutyDate}.`,
     };
   }
 
-  const newAssignment: DutyAssignment = {
-    id: `assign-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-    ...input,
-    instructorName: getUserById(input.instructorId)?.fullName || '',
-  };
+  const created = await prisma.dutyAssignment.create({
+    data: {
+      rosterWeekId: input.rosterWeekId,
+      instructorId: input.instructorId,
+      dutyDate: input.dutyDate,
+      slotLabel: input.slotLabel,
+      startTime: input.startTime,
+      endTime: input.endTime,
+      batchName: input.batchName,
+      moduleName: input.moduleName,
+      roomLab: input.roomLab,
+      notes: input.notes,
+    },
+    include: { instructor: true },
+  });
 
-  state.dutyAssignments.push(newAssignment);
-  saveState(state);
-  return { success: true, assignment: newAssignment };
+  return {
+    success: true,
+    assignment: {
+      id: created.id,
+      rosterWeekId: created.rosterWeekId,
+      instructorId: created.instructorId,
+      instructorName: created.instructor.fullName,
+      dutyDate: created.dutyDate,
+      slotLabel: created.slotLabel,
+      startTime: created.startTime,
+      endTime: created.endTime,
+      batchName: created.batchName,
+      moduleName: created.moduleName,
+      roomLab: created.roomLab || undefined,
+      notes: created.notes || undefined,
+    },
+  };
 }
 
-export function deleteDutyAssignment(assignmentId: string): boolean {
-  const state = loadState();
-  const initialLen = state.dutyAssignments.length;
-  state.dutyAssignments = state.dutyAssignments.filter((a) => a.id !== assignmentId);
-  if (state.dutyAssignments.length !== initialLen) {
-    saveState(state);
+export async function deleteDutyAssignment(assignmentId: string): Promise<boolean> {
+  try {
+    await prisma.dutyAssignment.delete({
+      where: { id: assignmentId },
+    });
     return true;
+  } catch {
+    return false;
   }
-  return false;
 }
 
 // ----------------------------------------------------
 // Night Shifts
 // ----------------------------------------------------
-export function getNightShifts(weekId?: string): NightShift[] {
-  const state = loadState();
-  const week = weekId ? state.rosterWeeks.find((w) => w.id === weekId) : undefined;
-  const shifts = weekId
-    ? state.nightShifts.filter(
-        (s) => s.rosterWeekId === weekId || (week && s.shiftDate >= week.startDate && s.shiftDate <= week.endDate)
-      )
-    : state.nightShifts;
+export async function getNightShifts(weekId?: string): Promise<NightShift[]> {
+  let where = {};
+  if (weekId) {
+    const week = await prisma.rosterWeek.findUnique({ where: { id: weekId } });
+    if (week) {
+      where = {
+        OR: [
+          { rosterWeekId: weekId },
+          {
+            AND: [
+              { shiftDate: { gte: week.startDate } },
+              { shiftDate: { lte: week.endDate } },
+            ],
+          },
+        ],
+      };
+    } else {
+      where = { rosterWeekId: weekId };
+    }
+  }
 
-  return shifts.map((s) => {
-    const inst = getUserById(s.instructorId);
-    return {
-      ...s,
-      instructorName: inst?.fullName || 'Unassigned',
-      instructorPhone: inst?.phone,
-    };
+  const shifts = await prisma.nightShift.findMany({
+    where,
+    include: { instructor: true },
+    orderBy: { shiftDate: 'asc' },
   });
+
+  return shifts.map((s) => ({
+    id: s.id,
+    rosterWeekId: s.rosterWeekId,
+    instructorId: s.instructorId,
+    instructorName: s.instructor.fullName,
+    shiftDate: s.shiftDate,
+    notes: s.notes || undefined,
+  }));
 }
 
-export function setNightShift(rosterWeekId: string, shiftDate: string, instructorId: string, notes?: string): { success: boolean; error?: string } {
-  const state = loadState();
+export async function setNightShift(
+  rosterWeekId: string,
+  shiftDate: string,
+  instructorId: string,
+  notes?: string
+): Promise<{ success: boolean; error?: string }> {
+  // Check approved leave
+  const approvedLeave = await prisma.leaveRequest.findFirst({
+    where: {
+      instructorId,
+      status: 'APPROVED',
+      startDate: { lte: shiftDate },
+      endDate: { gte: shiftDate },
+    },
+    include: { instructor: true },
+  });
 
-  // Check leave
-  const hasLeave = state.leaveRequests.some(
-    (l) =>
-      l.instructorId === instructorId &&
-      l.status === 'APPROVED' &&
-      shiftDate >= l.startDate &&
-      shiftDate <= l.endDate
-  );
-  if (hasLeave) {
+  if (approvedLeave) {
     return {
       success: false,
-      error: `Instructor has approved leave on ${shiftDate} and cannot take Night Duty.`,
+      error: `${approvedLeave.instructor?.fullName || 'Instructor'} has approved leave on ${shiftDate} and cannot take Night Duty.`,
     };
   }
 
-  // Replace or add
-  const existingIdx = state.nightShifts.findIndex((s) => s.shiftDate === shiftDate);
-  const newShift: NightShift = {
-    id: existingIdx !== -1 ? state.nightShifts[existingIdx].id : `ns-${Date.now()}`,
-    rosterWeekId,
-    instructorId,
-    shiftDate,
-    notes,
-    instructorName: getUserById(instructorId)?.fullName || '',
-  };
+  // Find existing shift for this date
+  const existing = await prisma.nightShift.findFirst({
+    where: { shiftDate },
+  });
 
-  if (existingIdx !== -1) {
-    state.nightShifts[existingIdx] = newShift;
+  if (existing) {
+    await prisma.nightShift.update({
+      where: { id: existing.id },
+      data: {
+        instructorId,
+        rosterWeekId,
+        notes: notes || existing.notes,
+      },
+    });
   } else {
-    state.nightShifts.push(newShift);
+    await prisma.nightShift.create({
+      data: {
+        rosterWeekId,
+        instructorId,
+        shiftDate,
+        notes,
+      },
+    });
   }
 
-  saveState(state);
   return { success: true };
 }
 
 // ----------------------------------------------------
-// Leave Requests (Dual Approval: Yasith & Dr. Thisara)
+// Leave Requests
 // ----------------------------------------------------
-export function getAllLeaveRequests(): LeaveRequest[] {
-  const state = loadState();
-  return state.leaveRequests
-    .map((l) => ({
-      ...l,
-      instructorName: getUserById(l.instructorId)?.fullName || 'Instructor',
-      reviewedByName: l.reviewedById ? getUserById(l.reviewedById)?.fullName : undefined,
-    }))
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+export async function getAllLeaveRequests(): Promise<LeaveRequest[]> {
+  const leaves = await prisma.leaveRequest.findMany({
+    include: {
+      instructor: true,
+      reviewedBy: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+
+  return leaves.map((l) => ({
+    id: l.id,
+    instructorId: l.instructorId,
+    instructorName: l.instructor.fullName,
+    startDate: l.startDate,
+    endDate: l.endDate,
+    reason: l.reason,
+    status: l.status,
+    reviewedById: l.reviewedById || undefined,
+    reviewedByName: l.reviewedBy?.fullName || undefined,
+    reviewedAt: l.reviewedAt ? l.reviewedAt.toISOString() : undefined,
+    reviewComment: l.reviewComment || undefined,
+    createdAt: l.createdAt.toISOString(),
+  }));
 }
 
-export function createLeaveRequest(instructorId: string, startDate: string, endDate: string, reason: string): LeaveRequest {
-  const state = loadState();
-  const newLeave: LeaveRequest = {
-    id: `leave-${Date.now()}`,
-    instructorId,
-    instructorName: getUserById(instructorId)?.fullName || '',
-    startDate,
-    endDate,
-    reason,
-    status: 'PENDING',
-    createdAt: new Date().toISOString(),
+export async function createLeaveRequest(
+  instructorId: string,
+  startDate: string,
+  endDate: string,
+  reason: string
+): Promise<LeaveRequest> {
+  const created = await prisma.leaveRequest.create({
+    data: {
+      instructorId,
+      startDate,
+      endDate,
+      reason,
+      status: 'PENDING',
+    },
+    include: { instructor: true },
+  });
+
+  return {
+    id: created.id,
+    instructorId: created.instructorId,
+    instructorName: created.instructor.fullName,
+    startDate: created.startDate,
+    endDate: created.endDate,
+    reason: created.reason,
+    status: created.status,
+    createdAt: created.createdAt.toISOString(),
   };
-
-  state.leaveRequests.push(newLeave);
-  saveState(state);
-  return newLeave;
 }
 
-export function reviewLeaveRequest(
+export async function reviewLeaveRequest(
   leaveId: string,
   status: 'APPROVED' | 'REJECTED',
   reviewerId: string,
   reviewComment?: string
-): LeaveRequest {
-  const state = loadState();
-  const leaveIdx = state.leaveRequests.findIndex((l) => l.id === leaveId);
-  if (leaveIdx === -1) throw new Error('Leave request not found');
+): Promise<LeaveRequest> {
+  const updated = await prisma.leaveRequest.update({
+    where: { id: leaveId },
+    data: {
+      status,
+      reviewedById: reviewerId,
+      reviewedAt: new Date(),
+      reviewComment: reviewComment || (status === 'APPROVED' ? 'Approved' : 'Rejected'),
+    },
+    include: {
+      instructor: true,
+      reviewedBy: true,
+    },
+  });
 
-  const reviewer = getUserById(reviewerId);
-  const updated: LeaveRequest = {
-    ...state.leaveRequests[leaveIdx],
-    status,
-    reviewedById: reviewerId,
-    reviewedByName: reviewer?.fullName || 'Administrator',
-    reviewedAt: new Date().toISOString(),
-    reviewComment: reviewComment || (status === 'APPROVED' ? 'Approved' : 'Rejected'),
+  await prisma.auditLog.create({
+    data: {
+      userId: reviewerId,
+      action: status === 'APPROVED' ? 'APPROVE_LEAVE' : 'REJECT_LEAVE',
+      targetEntity: 'LeaveRequest',
+      targetId: leaveId,
+      metadata: `Status changed to ${status} for ${updated.instructor.fullName}`,
+    },
+  });
+
+  return {
+    id: updated.id,
+    instructorId: updated.instructorId,
+    instructorName: updated.instructor.fullName,
+    startDate: updated.startDate,
+    endDate: updated.endDate,
+    reason: updated.reason,
+    status: updated.status,
+    reviewedById: updated.reviewedById || undefined,
+    reviewedByName: updated.reviewedBy?.fullName || undefined,
+    reviewedAt: updated.reviewedAt ? updated.reviewedAt.toISOString() : undefined,
+    reviewComment: updated.reviewComment || undefined,
+    createdAt: updated.createdAt.toISOString(),
   };
-
-  state.leaveRequests[leaveIdx] = updated;
-  saveState(state);
-  return updated;
 }
 
 // ----------------------------------------------------
 // Executive Status Calculator (Dr. Thisara's Cockpit)
 // ----------------------------------------------------
-export function getExecutiveStatus(dateStr: string, slotLabelFilter?: string): ExecutiveStatusReport {
-  const state = loadState();
-  const allInstructors = getInstructors();
+export async function getExecutiveStatus(
+  dateStr: string,
+  slotLabelFilter?: string,
+  preloadedInstructors?: User[]
+): Promise<ExecutiveStatusReport> {
+  const allInstructors = preloadedInstructors ?? (await getInstructors());
 
-  // 1. Identify who is on leave on this date
-  const leavesOnDate = state.leaveRequests.filter(
-    (l) => l.status === 'APPROVED' && dateStr >= l.startDate && dateStr <= l.endDate
-  );
+  // 1. Approved leaves spanning dateStr
+  const leavesOnDate = await prisma.leaveRequest.findMany({
+    where: {
+      status: 'APPROVED',
+      startDate: { lte: dateStr },
+      endDate: { gte: dateStr },
+    },
+    include: { instructor: true },
+  });
+
   const onLeaveInstructors = leavesOnDate
     .map((l) => {
       const inst = allInstructors.find((i) => i.id === l.instructorId);
-      return inst ? { instructor: inst, leave: l } : null;
+      if (!inst) return null;
+      return {
+        instructor: inst,
+        leave: {
+          id: l.id,
+          instructorId: l.instructorId,
+          instructorName: l.instructor.fullName,
+          startDate: l.startDate,
+          endDate: l.endDate,
+          reason: l.reason,
+          status: l.status,
+          createdAt: l.createdAt.toISOString(),
+        },
+      };
     })
     .filter(Boolean) as Array<{ instructor: User; leave: LeaveRequest }>;
 
   const onLeaveIds = new Set(leavesOnDate.map((l) => l.instructorId));
 
-  // 2. Identify duties on this date
-  let dayAssignments = state.dutyAssignments.filter((a) => a.dutyDate === dateStr);
+  // 2. Duty assignments on dateStr
+  let dayAssignments = await prisma.dutyAssignment.findMany({
+    where: { dutyDate: dateStr },
+    include: { instructor: true },
+    orderBy: { startTime: 'asc' },
+  });
+
   if (slotLabelFilter && slotLabelFilter !== 'ALL') {
-    dayAssignments = dayAssignments.filter((a) => a.slotLabel.includes(slotLabelFilter) || a.startTime === slotLabelFilter);
+    dayAssignments = dayAssignments.filter(
+      (a) => a.slotLabel.includes(slotLabelFilter) || a.startTime === slotLabelFilter
+    );
   }
 
   const onDutyInstructors = dayAssignments
     .map((a) => {
       const inst = allInstructors.find((i) => i.id === a.instructorId);
-      return inst ? { instructor: inst, assignment: a } : null;
+      if (!inst) return null;
+      return {
+        instructor: inst,
+        assignment: {
+          id: a.id,
+          rosterWeekId: a.rosterWeekId,
+          instructorId: a.instructorId,
+          instructorName: a.instructor.fullName,
+          dutyDate: a.dutyDate,
+          slotLabel: a.slotLabel,
+          startTime: a.startTime,
+          endTime: a.endTime,
+          batchName: a.batchName,
+          moduleName: a.moduleName,
+          roomLab: a.roomLab || undefined,
+          notes: a.notes || undefined,
+        },
+      };
     })
     .filter(Boolean) as Array<{ instructor: User; assignment: DutyAssignment }>;
 
   const onDutyIds = new Set(dayAssignments.map((a) => a.instructorId));
 
-  // 3. Mathematical Free Pool: Active Instructors \ (OnLeave U OnDuty)
+  // 3. Mathematical Free Pool: Cadre \ (OnDuty U OnLeave)
   const freeStandby = allInstructors.filter(
     (inst) => !onLeaveIds.has(inst.id) && !onDutyIds.has(inst.id)
   );
 
-  // 4. Tonight's Night Duty Instructor
-  const nightShift = state.nightShifts.find((s) => s.shiftDate === dateStr);
+  // 4. Tonight's Night Duty Caretaker
+  const nightShift = await prisma.nightShift.findFirst({
+    where: { shiftDate: dateStr },
+    include: { instructor: true },
+  });
+
   const nightDutyInstructor = nightShift
     ? allInstructors.find((i) => i.id === nightShift.instructorId)
     : undefined;

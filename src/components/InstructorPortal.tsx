@@ -1,12 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { User, DutyAssignment, NightShift, LeaveRequest, RosterWeek } from '@/types';
 import {
   Calendar,
   Clock,
   Moon,
-  BookOpen,
   MapPin,
   Send,
   CheckCircle2,
@@ -37,18 +36,39 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
   rosterWeek,
   onRefresh,
 }) => {
+  const isIndividualUser = currentUser.id !== 'general-instructor';
   const [activeSubTab, setActiveSubTab] = useState<'schedule' | 'applyLeave' | 'teamLeaves'>('schedule');
-  // Selected instructor filter for viewing tasks
-  const [selectedInstructorId, setSelectedInstructorId] = useState<string>('ALL');
 
-  // Leave Form State
-  const [applicantId, setApplicantId] = useState<string>('');
+  // Selected instructor filter for viewing tasks (defaults to logged-in user if individual account)
+  const [selectedInstructorId, setSelectedInstructorId] = useState<string>(
+    isIndividualUser ? currentUser.id : 'ALL'
+  );
+
+  // Leave Form State (pre-fills applicant for individual user)
+  const [applicantId, setApplicantId] = useState<string>(isIndividualUser ? currentUser.id : '');
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
   const [reason, setReason] = useState<string>('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Detect potential duty overlaps for the applied leave dates
+  const conflictingDuties = useMemo(() => {
+    if (!applicantId || !startDate) return [];
+    const end = endDate || startDate;
+    return dutyAssignments.filter(
+      (a) => a.instructorId === applicantId && a.dutyDate >= startDate && a.dutyDate <= end
+    );
+  }, [applicantId, startDate, endDate, dutyAssignments]);
+
+  const conflictingNightShifts = useMemo(() => {
+    if (!applicantId || !startDate) return [];
+    const end = endDate || startDate;
+    return nightShifts.filter(
+      (s) => s.instructorId === applicantId && s.shiftDate >= startDate && s.shiftDate <= end
+    );
+  }, [applicantId, startDate, endDate, nightShifts]);
 
   // Filter assignments based on dropdown selection
   const displayedAssignments = dutyAssignments
@@ -98,14 +118,18 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
     try {
       await submitLeaveAction(applicantId, startDate, end, reason.trim());
       const inst = allInstructors.find((i) => i.id === applicantId);
-      setSuccessMessage(`Holiday application for ${inst?.fullName || 'Instructor'} submitted! Yasith & Dr. Thisara have been notified.`);
+      setSuccessMessage(
+        `Holiday application for ${inst?.fullName || 'Instructor'} submitted! Demonstrators and Dr. Thisara have been notified.`
+      );
       setReason('');
       setStartDate('');
       setEndDate('');
-      setApplicantId('');
+      if (!isIndividualUser) {
+        setApplicantId('');
+      }
       onRefresh();
-      setTimeout(() => setSuccessMessage(null), 5000);
-    } catch (err) {
+      setTimeout(() => setSuccessMessage(null), 6000);
+    } catch {
       setErrorMessage('Failed to submit leave application');
     } finally {
       setIsSubmitting(false);
@@ -114,20 +138,28 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Top Banner: General Instructor Portal Header */}
+      {/* Top Banner: Instructor Portal Header */}
       <div className="bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 rounded-2xl p-6 text-white border border-purple-900/50 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center space-x-4">
             <div className="w-14 h-14 rounded-2xl bg-purple-600 text-white font-black text-xl flex items-center justify-center shadow-inner">
-              <Users className="w-7 h-7" />
+              {isIndividualUser ? (
+                <span>{currentUser.fullName.substring(0, 2).toUpperCase()}</span>
+              ) : (
+                <Users className="w-7 h-7" />
+              )}
             </div>
             <div>
               <span className="text-xs text-purple-300 font-semibold uppercase tracking-wider">
-                Instructors Cadre Portal
+                {isIndividualUser ? 'Cadre Member Workspace' : 'Instructors Cadre Portal'}
               </span>
-              <h2 className="text-2xl font-black text-white">General Instructor Workspace</h2>
+              <h2 className="text-2xl font-black text-white">
+                {isIndividualUser ? `Welcome, ${currentUser.fullName}` : 'General Instructor Workspace'}
+              </h2>
               <p className="text-xs text-slate-300 mt-0.5">
-                Shared terminal for the 8 team members • Check assigned lectures, night shifts & apply for holiday
+                {isIndividualUser
+                  ? `Signed in as ${currentUser.role.toLowerCase()} (${currentUser.email}) • View assigned duties & request leave`
+                  : 'Shared terminal for the 8 team members • Check assigned lectures, night shifts & apply for holiday'}
               </p>
             </div>
           </div>
@@ -146,7 +178,7 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
               <option value="ALL">All 8 Instructors (Full Team Roster)</option>
               {allInstructors.map((inst) => (
                 <option key={inst.id} value={inst.id}>
-                  {inst.fullName}
+                  {inst.fullName} {inst.id === currentUser.id ? '(You)' : ''}
                 </option>
               ))}
             </select>
@@ -350,24 +382,43 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
 
             <form onSubmit={handleApplyLeave} className="space-y-4">
               {/* Select which instructor is applying */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Instructor Name (Cadre of 8)
-                </label>
-                <select
-                  value={applicantId}
-                  onChange={(e) => setApplicantId(e.target.value)}
-                  className="w-full text-sm border border-slate-300 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
-                  required
-                >
-                  <option value="">Select your name from the 8 instructors...</option>
-                  {allInstructors.map((inst) => (
-                    <option key={inst.id} value={inst.id}>
-                      {inst.fullName} ({inst.email})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {isIndividualUser ? (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Applicant
+                  </label>
+                  <div className="flex items-center space-x-3 bg-purple-50/80 border border-purple-200 rounded-xl p-3">
+                    <div className="w-8 h-8 rounded-lg bg-purple-600 text-white font-bold flex items-center justify-center text-xs">
+                      {currentUser.fullName.substring(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <div className="font-bold text-slate-900 text-sm">{currentUser.fullName}</div>
+                      <div className="text-xs text-slate-500">
+                        {currentUser.email} • {currentUser.phone || 'NIBM Teaching Cadre'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                    Instructor Name (Cadre of 8)
+                  </label>
+                  <select
+                    value={applicantId}
+                    onChange={(e) => setApplicantId(e.target.value)}
+                    className="w-full text-sm border border-slate-300 rounded-xl p-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                    required
+                  >
+                    <option value="">Select your name from the 8 instructors...</option>
+                    {allInstructors.map((inst) => (
+                      <option key={inst.id} value={inst.id}>
+                        {inst.fullName} ({inst.email})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
@@ -394,6 +445,23 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
                   />
                 </div>
               </div>
+
+              {/* Roster Conflict Alert Banner */}
+              {(conflictingDuties.length > 0 || conflictingNightShifts.length > 0) && (
+                <div className="p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-900 space-y-1">
+                  <div className="flex items-center space-x-1.5 font-bold text-amber-950">
+                    <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                    <span>Roster Overlap Notice</span>
+                  </div>
+                  <p className="text-amber-800">
+                    You currently have{' '}
+                    {conflictingDuties.length > 0 && `${conflictingDuties.length} teaching duty session(s)`}
+                    {conflictingDuties.length > 0 && conflictingNightShifts.length > 0 && ' and '}
+                    {conflictingNightShifts.length > 0 && `${conflictingNightShifts.length} night shift(s)`}{' '}
+                    scheduled during this window. If approved, Demonstrators (Yasith & Kithnuka) will arrange backup coverage.
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
@@ -456,10 +524,10 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
                     <div className="text-[11px] text-slate-600">
                       {leave.startDate} {leave.startDate !== leave.endDate && `to ${leave.endDate}`}
                     </div>
-                    <p className="text-slate-600 italic mt-1">"{leave.reason}"</p>
+                    <p className="text-slate-600 italic mt-1">&ldquo;{leave.reason}&rdquo;</p>
                     {leave.reviewedByName && (
                       <div className="text-[10px] text-slate-500 mt-1 pt-1 border-t border-slate-200">
-                        Reviewed by <strong>{leave.reviewedByName}</strong>: "{leave.reviewComment}"
+                        Reviewed by <strong>{leave.reviewedByName}</strong>: &ldquo;{leave.reviewComment}&rdquo;
                       </div>
                     )}
                   </div>
@@ -501,7 +569,7 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
                       <p className="text-xs text-slate-500">
                         Off on: <strong>{leave.startDate}</strong> {leave.startDate !== leave.endDate && `to ${leave.endDate}`}
                       </p>
-                      <p className="text-[11px] text-slate-600 italic mt-0.5">"{leave.reason}"</p>
+                      <p className="text-[11px] text-slate-600 italic mt-0.5">&ldquo;{leave.reason}&rdquo;</p>
                     </div>
                     <span className="text-[10px] font-bold bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full uppercase">
                       On Leave

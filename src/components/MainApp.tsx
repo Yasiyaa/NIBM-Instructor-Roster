@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { User, RosterWeek, DutyAssignment, NightShift, LeaveRequest, ExecutiveStatusReport } from '@/types';
 import { Header } from '@/components/Header';
 import { ExecutiveDashboard } from '@/components/ExecutiveDashboard';
@@ -10,7 +10,7 @@ import { LeaveManagement } from '@/components/LeaveManagement';
 import { LoginPage } from '@/components/LoginPage';
 import { PublicStatusBoard } from '@/components/PublicStatusBoard';
 import { WeeklyScheduleView } from '@/components/WeeklyScheduleView';
-import { getAppData } from '@/lib/actions';
+import { getAppData, logoutAction } from '@/lib/actions';
 
 interface MainAppProps {
   initialData: {
@@ -22,45 +22,35 @@ interface MainAppProps {
     leaveRequests: LeaveRequest[];
     executiveReport: ExecutiveStatusReport;
   };
+  initialUser: User | null;
 }
 
-export const MainApp: React.FC<MainAppProps> = ({ initialData }) => {
+export const MainApp: React.FC<MainAppProps> = ({ initialData, initialUser }) => {
   const [data, setData] = useState(initialData);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [isClientLoaded, setIsClientLoaded] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(initialUser);
   const [isPublicMode, setIsPublicMode] = useState(false);
-  const [activeTab, setActiveTab] = useState<'executive' | 'weekly' | 'planner' | 'instructor' | 'leaves'>('planner');
   const [selectedWeekStart, setSelectedWeekStart] = useState<string>(data.rosterWeek.startDate);
 
-  // Load saved session on client mount
-  useEffect(() => {
-    setIsClientLoaded(true);
-    const savedUserId = localStorage.getItem('nibm_roster_user_id');
-    if (savedUserId) {
-      const found = initialData.users.find((u) => u.id === savedUserId);
-      if (found) {
-        handleUserLogin(found);
-      }
-    }
-  }, [initialData.users]);
+  // Determine initial active tab based on role
+  const getDefaultTab = (user: User | null): 'executive' | 'weekly' | 'planner' | 'instructor' | 'leaves' => {
+    if (!user) return 'planner';
+    if (user.role === 'INSTRUCTOR') return 'instructor';
+    if (user.role === 'EXECUTIVE') return 'executive';
+    return 'planner';
+  };
+
+  const [activeTab, setActiveTab] = useState<'executive' | 'weekly' | 'planner' | 'instructor' | 'leaves'>(
+    getDefaultTab(initialUser)
+  );
 
   const handleUserLogin = (user: User) => {
     setCurrentUser(user);
     setIsPublicMode(false);
-    localStorage.setItem('nibm_roster_user_id', user.id);
-
-    // Route to designated dashboard
-    if (user.role === 'INSTRUCTOR') {
-      setActiveTab('instructor');
-    } else if (user.role === 'EXECUTIVE') {
-      setActiveTab('executive');
-    } else {
-      setActiveTab('planner');
-    }
+    setActiveTab(getDefaultTab(user));
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('nibm_roster_user_id');
+  const handleLogout = async () => {
+    await logoutAction();
     setCurrentUser(null);
     setIsPublicMode(false);
   };
@@ -84,15 +74,7 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData }) => {
     }
   };
 
-  if (!isClientLoaded) {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white text-sm">
-        Loading NIBM System...
-      </div>
-    );
-  }
-
-  // 1. Unauthenticated Public Status Board (No Login Required)
+  // 1. Unauthenticated Public Status Board (Lobby Display View)
   if (isPublicMode) {
     return (
       <PublicStatusBoard
@@ -103,37 +85,40 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData }) => {
     );
   }
 
-  // 2. Login Page (Passes onOpenPublicBoard)
+  // 2. Login Page (If not authenticated)
   if (!currentUser) {
     return (
       <LoginPage
         allUsers={data.users}
-        onLogin={handleUserLogin}
+        onLoginSuccess={handleUserLogin}
         onOpenPublicBoard={() => setIsPublicMode(true)}
       />
     );
   }
 
   const pendingLeaves = data.leaveRequests.filter((l) => l.status === 'PENDING');
-
   const isInstructor = currentUser.role === 'INSTRUCTOR';
   const isExecutive = currentUser.role === 'EXECUTIVE';
   const isDemonstrator = currentUser.role === 'DEMONSTRATOR';
 
   return (
     <div className="min-h-screen bg-slate-100 flex flex-col font-sans antialiased text-slate-900">
-      {/* Header with Role Restraints */}
+      {/* Header with Server-Side Session Display */}
       <Header
         currentUser={currentUser}
         onLogout={handleLogout}
         activeTab={activeTab}
         onSelectTab={(tab) => setActiveTab(tab)}
         pendingLeavesCount={pendingLeaves.length}
+        onProfileUpdated={(updated) => {
+          setCurrentUser((prev) => (prev ? { ...prev, ...updated } : null));
+          handleRefresh();
+        }}
       />
 
-      {/* Main Container: Strictly Renders Authorized Views */}
+      {/* Main Content Area */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
-        {/* 1. Instructor Portal: ONLY for Instructors */}
+        {/* 1. Instructor Portal: Visible to Technical Cadre */}
         {isInstructor && activeTab === 'instructor' && (
           <InstructorPortal
             currentUser={currentUser}
@@ -146,7 +131,7 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData }) => {
           />
         )}
 
-        {/* 2. Dr. Thisara's Executive Cockpit: For Executive & Demonstrator */}
+        {/* 2. Dr. Thisara's Executive Cockpit: Visible to Executive & Demonstrator */}
         {(isExecutive || isDemonstrator) && activeTab === 'executive' && (
           <ExecutiveDashboard
             currentUser={currentUser}
@@ -163,8 +148,8 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData }) => {
           />
         )}
 
-        {/* 3. Entire Week Master Schedule: For Executive & Demonstrator */}
-        {(isExecutive || isDemonstrator) && activeTab === 'weekly' && (
+        {/* 3. Entire Week Master Schedule: Visible to all authenticated staff */}
+        {activeTab === 'weekly' && (
           <WeeklyScheduleView
             currentUser={currentUser}
             rosterWeek={data.rosterWeek}
@@ -174,13 +159,13 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData }) => {
             allInstructors={data.instructors}
             onRefresh={handleRefresh}
             onWeekChange={handleWeekChange}
-            onSelectDateForCockpit={(dateStr) => {
-              setActiveTab('executive');
-            }}
+            onSelectDateForCockpit={
+              isExecutive || isDemonstrator ? () => setActiveTab('executive') : undefined
+            }
           />
         )}
 
-        {/* 3. Yasith's Sunday Planning Studio: ONLY for Demonstrator */}
+        {/* 4. Yasith's Sunday Planning Studio: Visible ONLY to Demonstrator */}
         {isDemonstrator && activeTab === 'planner' && (
           <SundayPlanner
             currentUser={currentUser}
@@ -194,7 +179,7 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData }) => {
           />
         )}
 
-        {/* 4. Leave Approvals Console: For Demonstrator & Executive */}
+        {/* 5. Leave Approvals Console: Visible to Demonstrator & Executive */}
         {(isDemonstrator || isExecutive) && activeTab === 'leaves' && (
           <LeaveManagement
             currentUser={currentUser}
@@ -205,13 +190,13 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData }) => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
+      <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500 print:hidden">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
           <span>
             NIBM Academic & Technical Operations System • SOC / IT Division
           </span>
           <span className="font-semibold text-slate-600">
-            Role: {currentUser.role} • Logged in as {currentUser.fullName}
+            Role: {currentUser.role} • Signed in as {currentUser.fullName}
           </span>
         </div>
       </footer>
