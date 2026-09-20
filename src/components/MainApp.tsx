@@ -13,6 +13,8 @@ import { PublicStatusBoard } from '@/components/PublicStatusBoard';
 import { WeeklyScheduleView } from '@/components/WeeklyScheduleView';
 import { ChangePasswordScreen } from '@/components/ChangePasswordScreen';
 import { AdminUserManagement } from '@/components/AdminUserManagement';
+import { ProfileSettings } from '@/components/ProfileSettings';
+import { DialogProvider } from '@/components/DialogProvider';
 import { getAppData, logoutAction } from '@/lib/actions';
 
 interface MainAppProps {
@@ -111,101 +113,108 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData, initialCurrentUse
   const isAdmin = currentUser.role === 'ADMIN';
 
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col font-sans antialiased text-slate-100">
-      {/* Header with Role Restraints */}
-      <Header
-        currentUser={currentUser}
-        onLogout={handleLogout}
-        activeTab={activeTab}
-        onSelectTab={(tab) => setActiveTab(tab)}
-        pendingLeavesCount={pendingLeaves.length}
-      />
+    <DialogProvider>
+      <div className="min-h-screen bg-slate-950 flex flex-col font-sans antialiased text-slate-100">
+        {/* Header with Role Restraints */}
+        <Header
+          currentUser={currentUser}
+          onLogout={handleLogout}
+          activeTab={activeTab}
+          onSelectTab={(tab) => setActiveTab(tab)}
+          pendingLeavesCount={pendingLeaves.length}
+        />
 
-      {/* Main Container: Strictly Renders Authorized Views */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
-        {/* 1. Instructor Portal: ONLY for Instructors */}
-        {isInstructor && activeTab === 'instructor' && (
-          <InstructorPortal
-            allInstructors={data.instructors}
-            dutyAssignments={data.dutyAssignments}
-            nightShifts={data.nightShifts}
-            leaveRequests={data.leaveRequests}
-            rosterWeek={data.rosterWeek}
-            onRefresh={handleRefresh}
-          />
-        )}
+        {/* Main Container: Strictly Renders Authorized Views */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+          {/* 1. Instructor Portal: ONLY for Instructors */}
+          {isInstructor && activeTab === 'instructor' && (
+            <InstructorPortal
+              currentUser={currentUser}
+              allInstructors={data.instructors}
+              dutyAssignments={data.dutyAssignments}
+              nightShifts={data.nightShifts}
+              leaveRequests={data.leaveRequests}
+              rosterWeek={data.rosterWeek}
+              onRefresh={handleRefresh}
+            />
+          )}
 
-        {/* 2. Dr. Thisara's Executive Cockpit: For Executive & Demonstrator */}
-        {(isExecutive || isDemonstrator) && activeTab === 'executive' && (
-          <ExecutiveDashboard
-            currentUser={currentUser}
-            initialReport={data.executiveReport}
-            pendingLeaves={pendingLeaves}
-            allInstructors={data.instructors}
-            rosterWeek={data.rosterWeek}
-            dutyAssignments={data.dutyAssignments}
-            nightShifts={data.nightShifts}
-            leaveRequests={data.leaveRequests}
-            onRefresh={handleRefresh}
-            onWeekChange={handleWeekChange}
-            initialViewMode="daily"
-          />
-        )}
+          {/* 2. Dr. Thisara's Executive Cockpit: For Executive, Demonstrator & Admin */}
+          {(isExecutive || isDemonstrator || isAdmin) && activeTab === 'executive' && (
+            <ExecutiveDashboard
+              currentUser={currentUser}
+              initialReport={data.executiveReport}
+              pendingLeaves={pendingLeaves}
+              allInstructors={data.instructors}
+              rosterWeek={data.rosterWeek}
+              dutyAssignments={data.dutyAssignments}
+              nightShifts={data.nightShifts}
+              leaveRequests={data.leaveRequests}
+              onRefresh={handleRefresh}
+              onWeekChange={handleWeekChange}
+              initialViewMode="daily"
+            />
+          )}
 
-        {/* 3. Entire Week Master Schedule: For Executive & Demonstrator */}
-        {(isExecutive || isDemonstrator) && activeTab === 'weekly' && (
-          <WeeklyScheduleView
-            rosterWeek={data.rosterWeek}
-            dutyAssignments={data.dutyAssignments}
-            nightShifts={data.nightShifts}
-            leaveRequests={data.leaveRequests}
-            allInstructors={data.instructors}
-            onWeekChange={handleWeekChange}
-            onSelectDateForCockpit={() => {
-              setActiveTab('executive');
-            }}
-          />
-        )}
+          {/* 3. Entire Week Master Schedule: For Executive, Demonstrator & Admin */}
+          {(isExecutive || isDemonstrator || isAdmin) && activeTab === 'weekly' && (
+            <WeeklyScheduleView
+              rosterWeek={data.rosterWeek}
+              dutyAssignments={data.dutyAssignments}
+              nightShifts={data.nightShifts}
+              leaveRequests={data.leaveRequests}
+              allInstructors={data.instructors}
+              onWeekChange={handleWeekChange}
+              onSelectDateForCockpit={() => {
+                setActiveTab('executive');
+              }}
+            />
+          )}
 
-        {/* 3. Yasith's Sunday Planning Studio: ONLY for Demonstrator */}
-        {isDemonstrator && activeTab === 'planner' && (
-          <SundayPlanner
-            currentUser={currentUser}
-            rosterWeek={data.rosterWeek}
-            dutyAssignments={data.dutyAssignments}
-            nightShifts={data.nightShifts}
-            leaveRequests={data.leaveRequests}
-            allInstructors={data.instructors}
-            catalog={data.catalog}
-            onRefresh={handleRefresh}
-            onWeekChange={handleWeekChange}
-          />
-        )}
+          {/* 3. Yasith's Sunday Planning Studio: For Demonstrator & Admin */}
+          {(isDemonstrator || isAdmin) && activeTab === 'planner' && (
+            <SundayPlanner
+              rosterWeek={data.rosterWeek}
+              dutyAssignments={data.dutyAssignments}
+              nightShifts={data.nightShifts}
+              leaveRequests={data.leaveRequests}
+              allInstructors={data.instructors}
+              catalog={data.catalog}
+              onRefresh={handleRefresh}
+              onWeekChange={handleWeekChange}
+            />
+          )}
 
-        {/* 4. Leave Approvals Console: For Demonstrator & Executive */}
-        {(isDemonstrator || isExecutive) && activeTab === 'leaves' && (
-          <LeaveManagement
-            currentUser={currentUser}
-            leaveRequests={data.leaveRequests}
-            onRefresh={handleRefresh}
-          />
-        )}
+          {/* 4. Leave Approvals Console: For Demonstrator, Executive & Admin */}
+          {(isDemonstrator || isExecutive || isAdmin) && activeTab === 'leaves' && (
+            <LeaveManagement
+              currentUser={currentUser}
+              leaveRequests={data.leaveRequests}
+              onRefresh={handleRefresh}
+            />
+          )}
 
-        {/* 5. Admin Console: ONLY for Admin */}
-        {isAdmin && activeTab === 'admin' && <AdminUserManagement currentUser={currentUser} />}
-      </main>
+          {/* 5. Admin Console: ONLY for Admin */}
+          {isAdmin && activeTab === 'admin' && <AdminUserManagement currentUser={currentUser} />}
 
-      {/* Footer */}
-      <footer className="bg-slate-900 border-t border-slate-800 py-4 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>
-            NIBM Academic & Technical Operations System • SOC / IT Division
-          </span>
-          <span className="font-medium text-slate-400">
-            Role: {currentUser.role} • Logged in as {currentUser.fullName}
-          </span>
-        </div>
-      </footer>
-    </div>
+          {/* 6. My Profile: every signed-in user can edit their own contact info */}
+          {activeTab === 'profile' && (
+            <ProfileSettings currentUser={currentUser} onUpdated={() => router.refresh()} />
+          )}
+        </main>
+
+        {/* Footer */}
+        <footer className="bg-slate-900 border-t border-slate-800 py-4 text-center text-xs text-slate-500">
+          <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <span>
+              NIBM Academic & Technical Operations System • SOC / IT Division
+            </span>
+            <span className="font-medium text-slate-400">
+              Role: {currentUser.role} • Logged in as {currentUser.fullName}
+            </span>
+          </div>
+        </footer>
+      </div>
+    </DialogProvider>
   );
 };

@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Lock, Mail, ArrowRight, Eye, AlertCircle } from 'lucide-react';
+import { Lock, User as UserIcon, ArrowRight, Eye, AlertCircle } from 'lucide-react';
 import { loginAction } from '@/lib/actions';
+import { AppLogo } from './AppLogo';
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
@@ -10,7 +11,7 @@ interface LoginPageProps {
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenPublicBoard }) => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -20,7 +21,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenPubl
     setError(null);
     setSubmitting(true);
 
-    const res = await loginAction(email, password);
+    const res = await loginAction(username, password);
     setSubmitting(false);
 
     if (!res.success) {
@@ -34,14 +35,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenPubl
     <div className="min-h-screen bg-slate-950 flex flex-col justify-center py-12 sm:px-6 lg:px-8 font-sans">
       <div className="sm:mx-auto sm:w-full sm:max-w-sm text-center">
         {/* NIBM Emblem */}
-        <div className="mx-auto h-11 w-11 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-200 font-semibold text-sm tracking-wide">
-          NIBM
-        </div>
+        <AppLogo className="mx-auto h-11 w-11" />
         <h1 className="mt-4 text-xl font-semibold text-white tracking-tight">
-          Instructor Roster Portal
+          SLATE
         </h1>
         <p className="mt-1 text-sm text-slate-500">
-          School of Computing • National Institute of Business Management
+          Instructor Roster Portal • School of Computing, NIBM
         </p>
       </div>
 
@@ -87,15 +86,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenPubl
 
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1.5">
-                Staff Email Address
+                Username
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-600 absolute left-3 top-1/2 -translate-y-1/2" />
+                <UserIcon className="w-4 h-4 text-slate-600 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
-                  type="email"
-                  placeholder="you@nibm.lk"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  type="text"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  placeholder="yourusername"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
                   className="w-full text-sm bg-slate-950 border border-slate-700 text-white rounded-lg pl-9 pr-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-600"
                   required
                 />
@@ -131,7 +132,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenPubl
         </div>
 
         <p className="mt-4 text-center text-xs text-slate-600">
-          NIBM Technical Cadre Operational System
+          SLATE • NIBM Technical Cadre Operational System
         </p>
       </div>
     </div>

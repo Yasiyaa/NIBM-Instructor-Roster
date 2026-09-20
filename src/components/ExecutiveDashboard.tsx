@@ -148,7 +148,6 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
       await reviewLeaveAction(
         leaveId,
         status,
-        currentUser.id,
         status === 'APPROVED' ? 'Approved via Executive Cockpit' : 'Declined via Executive Cockpit'
       );
       onRefresh();
@@ -190,19 +189,13 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
               }`}
             >
               <Calendar className="w-3.5 h-3.5" />
-              <span>Entire Week Master Schedule (7-Day View)</span>
+              <span>Entire Week Schedule</span>
             </button>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="text-xs text-slate-500 font-medium px-2">
-            {viewMode === 'daily'
-              ? 'Real-Time Daily Readiness & Standby Free Pool'
-              : 'Comprehensive 7-Day Academic Matrix & Cadre Workload'}
-          </div>
-
-          {currentUser.role === 'EXECUTIVE' && (
+          {(currentUser.role === 'EXECUTIVE' || currentUser.role === 'ADMIN') && (
             <button
               onClick={() => setAuditDrawerOpen(true)}
               className="flex items-center space-x-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 px-3.5 py-2 rounded-lg transition-colors cursor-pointer print:hidden"
@@ -235,14 +228,11 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
           <div>
             <div className="flex items-center space-x-2 text-blue-400 text-sm font-medium mb-1">
               <Shield className="w-4 h-4" />
-              <span>Executive Operational Cockpit • Dr. Thisara</span>
+              <span>Executive Cockpit</span>
             </div>
             <h2 className="text-2xl font-black tracking-tight text-white">
-              Daily Instructor Deployment & Readiness
+              Daily Readiness
             </h2>
-            <p className="text-slate-300 text-sm mt-1 max-w-2xl">
-              Live situational intelligence on the 8-member instructor cadre. Real-time visibility into who is actively teaching, who is free on standby for ad-hoc allocations, and who is on leave.
-            </p>
           </div>
 
           {/* Date Picker Controls */}
@@ -307,7 +297,6 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
             <span className="text-2xl font-black text-slate-100">{allInstructors.length}</span>
             <span className="text-xs text-slate-300">Members</span>
           </div>
-          <p className="text-[11px] text-slate-300 mt-1">Full-time operational team</p>
         </div>
 
         {/* Metric 2: On Duty */}
@@ -320,7 +309,6 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
             <span className="text-2xl font-black text-emerald-300">{report.onDuty.length}</span>
             <span className="text-xs text-emerald-400">Assigned</span>
           </div>
-          <p className="text-[11px] text-emerald-400 mt-1">Active lectures & labs</p>
         </div>
 
         {/* Metric 3: Free / Standby */}
@@ -333,7 +321,6 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
             <span className="text-2xl font-black text-amber-300">{report.freeStandby.length}</span>
             <span className="text-xs text-amber-400">Instructors</span>
           </div>
-          <p className="text-[11px] text-amber-400 mt-1">Ready for ad-hoc / marking</p>
         </div>
 
         {/* Metric 4: On Leave */}
@@ -346,7 +333,6 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
             <span className="text-2xl font-black text-rose-300">{report.onLeave.length}</span>
             <span className="text-xs text-rose-600">Away</span>
           </div>
-          <p className="text-[11px] text-rose-600 mt-1">Approved absences</p>
         </div>
       </div>
 
@@ -389,9 +375,6 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
               )}
             </div>
           </div>
-        </div>
-        <div className="text-xs text-slate-500 sm:text-right">
-          Overnight Campus & Lab Caretaker Duty
         </div>
       </div>
 
@@ -591,7 +574,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
               </h3>
             </div>
             <span className="text-xs text-amber-400 font-medium">
-              You (Dr. Thisara) or Yasith can sign off on these requests
+              You can review and sign off on these requests
             </span>
           </div>
 

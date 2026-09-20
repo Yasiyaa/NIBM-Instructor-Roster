@@ -14,6 +14,7 @@ import {
   Phone,
 } from 'lucide-react';
 import { getExecutiveReportAction } from '@/lib/actions';
+import { AppLogo } from './AppLogo';
 
 interface PublicStatusBoardProps {
   initialReport: ExecutiveStatusReport;
@@ -52,20 +53,18 @@ export const PublicStatusBoard: React.FC<PublicStatusBoardProps> = ({
       <header className="bg-slate-950/80 border-b border-slate-800 sticky top-0 z-50 backdrop-blur-md">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="h-9 w-9 rounded-lg bg-slate-800 border border-slate-700 flex items-center justify-center font-semibold text-sm text-slate-200 tracking-wide">
-              NIBM
-            </div>
+            <AppLogo className="h-9 w-9 shrink-0" />
             <div>
               <div className="flex items-center space-x-2">
                 <h1 className="text-sm sm:text-base font-semibold tracking-tight text-white">
-                  Instructor Daily Status Board
+                  SLATE
                 </h1>
                 <span className="text-[10px] bg-emerald-500/15 text-emerald-400 font-medium px-2 py-0.5 rounded border border-emerald-500/20">
                   Live View
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                Public Monitor • Who is on duty, who is free, and who is on leave
+                Daily Status Board • Who is on duty, who is free, and who is on leave
               </p>
             </div>
           </div>
