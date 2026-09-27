@@ -118,3 +118,49 @@ export interface AcademicCatalog {
   dutyTypes: string[];
   autoRefreshSeconds?: number;
 }
+
+export interface AiProposedDuty {
+  id: string; // temporary or target ID
+  action: 'CREATE' | 'UPDATE' | 'DELETE';
+  dutyDate: string;
+  slotLabel: string;
+  startTime: string;
+  endTime: string;
+  instructorId: string;
+  instructorName: string;
+  dutyType: string;
+  batchName?: string;
+  moduleName?: string;
+  roomLab?: string;
+  notes?: string;
+  reason: string;
+}
+
+export interface AiConflictReport {
+  unassignedSlotsCount: number;
+  unassignedNightShiftsCount: number;
+  workloadImbalances: Array<{
+    instructorId: string;
+    instructorName: string;
+    sessionCount: number;
+    teachingHours: number;
+    status: 'OVERLOAD' | 'BALANCED' | 'UNDERLOAD';
+  }>;
+  conflicts: Array<{
+    type: 'DOUBLE_BOOKING' | 'LEAVE_COLLISION' | 'UNSTAFFED_NIGHT';
+    description: string;
+    date: string;
+    slot?: string;
+    instructorName?: string;
+  }>;
+  recommendations: string[];
+}
+
+export interface AiSubstituteSuggestion {
+  instructor: User;
+  currentWeeklyHours: number;
+  isAvailable: boolean;
+  score: number;
+  matchReason: string;
+}
+

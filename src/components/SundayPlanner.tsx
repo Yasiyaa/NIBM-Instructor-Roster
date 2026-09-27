@@ -55,6 +55,7 @@ import {
 } from '@/lib/actions';
 import { getMatchingOppositeSlotDuty, mergeDutyAssignments } from '@/lib/roster-utils';
 import { useDialog } from './DialogProvider';
+import { AiCopilotDrawer } from './AiCopilotDrawer';
 
 interface SundayPlannerProps {
   rosterWeek: RosterWeek;
@@ -102,6 +103,27 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
   // Dynamic Week Starting Date State (User can plan starting from ANY date!)
   const [planningStartDate, setPlanningStartDate] = useState<string>(rosterWeek.startDate);
   const [prevRosterStartDate, setPrevRosterStartDate] = useState<string>(rosterWeek.startDate);
+
+  // AI Co-Pilot Drawer State
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement)?.isContentEditable
+      ) {
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setAiDrawerOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   if (rosterWeek.startDate !== prevRosterStartDate) {
     setPrevRosterStartDate(rosterWeek.startDate);
@@ -700,6 +722,16 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                 </span>
               </div>
             </div>
+
+            <button
+              onClick={() => setAiDrawerOpen(true)}
+              className="flex items-center space-x-1.5 text-xs font-bold px-4 py-2.5 rounded-lg shadow-md transition-all bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:via-indigo-500 hover:to-blue-500 text-white cursor-pointer active:scale-95 border border-purple-400/40 shadow-purple-900/30"
+              title="AI Roster Co-Pilot (Ctrl+K / ⌘K)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+              <span>AI Co-Pilot</span>
+              <span className="hidden sm:inline-block ml-1 text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-mono">⌘K</span>
+            </button>
 
             <button
               onClick={() => setCatalogModalOpen(true)}
@@ -2061,6 +2093,18 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
           </div>
         </div>
       )}
+
+      {/* AI Roster Co-Pilot Drawer */}
+      <AiCopilotDrawer
+        isOpen={aiDrawerOpen}
+        onClose={() => setAiDrawerOpen(false)}
+        rosterWeek={rosterWeek}
+        dutyAssignments={dutyAssignments}
+        nightShifts={nightShifts}
+        leaveRequests={leaveRequests}
+        allInstructors={allInstructors}
+        onRefresh={onRefresh}
+      />
     </div>
   );
 };

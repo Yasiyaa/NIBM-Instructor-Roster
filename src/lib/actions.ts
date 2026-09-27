@@ -44,7 +44,8 @@ import {
 } from './storage';
 import { createSession, deleteSession } from './session';
 import { getCurrentUser } from './auth';
-import { Role, User } from '@/types';
+import { Role, User, AiProposedDuty, AiConflictReport, AiSubstituteSuggestion } from '@/types';
+import { scanRosterHealth, generateAiSchedule, findEligibleSubstitutes } from './ai-scheduler';
 import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
 
@@ -366,3 +367,148 @@ export async function getAuditLogsAction(filter?: AuditLogFilter) {
   await requireRole('EXECUTIVE', 'ADMIN');
   return getAuditLogs(filter);
 }
+
+// ----------------------------------------------------
+// AI Roster Co-Pilot Actions
+// ----------------------------------------------------
+
+export async function scanRosterHealthAction(rosterWeekId: string): Promise<AiConflictReport> {
+  await requireRole('DEMONSTRATOR', 'EXECUTIVE', 'ADMIN');
+  const [allInstructors, rosterWeek, dutyAssignments, nightShifts, leaveRequests] = await Promise.all([
+    getInstructors(),
+    getOrCreateRosterWeek(),
+    getDutyAssignments(rosterWeekId),
+    getNightShifts(rosterWeekId),
+    getAllLeaveRequests(),
+  ]);
+
+  return scanRosterHealth({
+    rosterWeek,
+    dutyAssignments,
+    nightShifts,
+    leaveRequests,
+    allInstructors,
+  });
+}
+
+export async function generateAiScheduleAction(
+  rosterWeekId: string,
+  prompt?: string,
+  targetDate?: string
+): Promise<{ success: boolean; proposed: AiProposedDuty[]; error?: string }> {
+  await requireRole('DEMONSTRATOR', 'EXECUTIVE', 'ADMIN');
+  try {
+    const [allInstructors, rosterWeek, dutyAssignments, nightShifts, leaveRequests, catalog] = await Promise.all([
+      getInstructors(),
+      getOrCreateRosterWeek(),
+      getDutyAssignments(rosterWeekId),
+      getNightShifts(rosterWeekId),
+      getAllLeaveRequests(),
+      getCachedCatalog(),
+    ]);
+
+    const proposed = await generateAiSchedule({
+      rosterWeek,
+      dutyAssignments,
+      nightShifts,
+      leaveRequests,
+      allInstructors,
+      catalog,
+      prompt,
+      targetDate,
+    });
+
+    return { success: true, proposed };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to generate schedule';
+    return { success: false, proposed: [], error: message };
+  }
+}
+
+export async function findAiSubstitutesAction(
+  dateStr: string,
+  startTime: string,
+  absentInstructorId: string,
+  rosterWeekId?: string
+): Promise<{ success: boolean; suggestions: AiSubstituteSuggestion[]; error?: string }> {
+  await requireAuth();
+  try {
+    const [allInstructors, week, leaveRequests] = await Promise.all([
+      getInstructors(),
+      getOrCreateRosterWeek(),
+      getAllLeaveRequests(),
+    ]);
+
+    const targetWeekId = rosterWeekId || week.id;
+    const [dutyAssignments, nightShifts] = await Promise.all([
+      getDutyAssignments(targetWeekId),
+      getNightShifts(targetWeekId),
+    ]);
+
+    const suggestions = findEligibleSubstitutes({
+      dateStr,
+      startTime,
+      absentInstructorId,
+      allInstructors,
+      dutyAssignments,
+      nightShifts,
+      leaveRequests,
+    });
+
+    return { success: true, suggestions };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to find substitutes';
+    return { success: false, suggestions: [], error: message };
+  }
+}
+
+export async function applyAiScheduleChangesAction(
+  rosterWeekId: string,
+  changes: AiProposedDuty[]
+): Promise<{ success: boolean; appliedCount: number; errors: string[] }> {
+  const actor = await requireRole('DEMONSTRATOR', 'EXECUTIVE', 'ADMIN');
+  const errors: string[] = [];
+  let appliedCount = 0;
+
+  for (const item of changes) {
+    try {
+      if (item.dutyType === 'Night Shift') {
+        const res = await setNightShift(rosterWeekId, item.dutyDate, item.instructorId, item.notes, actor.id);
+        if (res.success) {
+          appliedCount++;
+        } else if (res.error) {
+          errors.push(`${item.dutyDate} Night Duty: ${res.error}`);
+        }
+      } else {
+        const res = await addDutyAssignment(
+          {
+            rosterWeekId,
+            instructorId: item.instructorId,
+            dutyDate: item.dutyDate,
+            slotLabel: item.slotLabel,
+            startTime: item.startTime,
+            endTime: item.endTime,
+            dutyType: item.dutyType,
+            batchName: item.batchName,
+            moduleName: item.moduleName,
+            roomLab: item.roomLab,
+            notes: item.notes,
+          },
+          actor.id
+        );
+        if (res.success) {
+          appliedCount++;
+        } else if (res.error) {
+          errors.push(`${item.dutyDate} ${item.startTime}: ${res.error}`);
+        }
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      errors.push(`${item.dutyDate} ${item.startTime}: ${msg}`);
+    }
+  }
+
+  revalidatePath('/');
+  return { success: true, appliedCount, errors };
+}
+
