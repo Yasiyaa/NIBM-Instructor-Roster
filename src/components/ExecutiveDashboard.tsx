@@ -420,7 +420,9 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                       )}
                     </div>
                     <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded">
-                      {assignment.startTime} - {assignment.endTime}
+                      {assignment.startTime === '09:00' && assignment.endTime === '16:00'
+                        ? '09:00 - 16:00 (Full Day)'
+                        : `${assignment.startTime} - ${assignment.endTime}`}
                     </span>
                   </div>
 

@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { User, RosterWeek, DutyAssignment, NightShift, LeaveRequest } from '@/types';
+import { isSameSession } from '@/lib/roster-utils';
 import {
   Calendar,
   Clock,
@@ -547,38 +548,47 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                           <span className="text-[10px] text-slate-400 italic">No lectures</span>
                         </div>
                       ) : (
-                        morningDuties.map((duty) => (
-                          <div
-                            key={duty.id}
-                            className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-2 shadow-2xs hover:shadow-xs transition-shadow"
-                          >
-                            <div className="text-xs font-bold text-blue-300 line-clamp-2 leading-snug">
-                              {duty.moduleName ?? duty.dutyType}
-                            </div>
-                            <div className="mt-1 flex items-center justify-between text-[11px]">
-                              {duty.batchName && (
-                                <span className="bg-blue-500/25 text-blue-400 font-bold px-1.5 py-0.2 rounded text-[10px]">
-                                  {duty.batchName}
-                                </span>
-                              )}
-                              {duty.roomLab && (
-                                <span className="text-slate-400 font-medium text-[10px] flex items-center gap-0.5">
-                                  <MapPin className="w-2.5 h-2.5 text-slate-400" />
-                                  {duty.roomLab}
-                                </span>
-                              )}
-                            </div>
-                            {duty.notes && (
-                              <div className="mt-1 text-[10px] text-slate-400 italic line-clamp-2">{duty.notes}</div>
-                            )}
-                            <div className="mt-1.5 pt-1 border-t border-blue-100 flex items-center space-x-1 text-[11px] font-semibold text-slate-200">
-                              <div className="w-4 h-4 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[9px]">
-                                {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
+                        morningDuties.map((duty) => {
+                          const isFullDay = afternoonDuties.some((a) => isSameSession(duty, a));
+                          return (
+                            <div
+                              key={duty.id}
+                              className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-2 shadow-2xs hover:shadow-xs transition-shadow"
+                            >
+                              <div className="text-xs font-bold text-blue-300 line-clamp-2 leading-snug">
+                                {duty.moduleName ?? duty.dutyType}
                               </div>
-                              <span className="truncate">{duty.instructorName}</span>
+                              <div className="mt-1 flex items-center justify-between text-[11px]">
+                                {duty.batchName && (
+                                  <span className="bg-blue-500/25 text-blue-400 font-bold px-1.5 py-0.2 rounded text-[10px]">
+                                    {duty.batchName}
+                                  </span>
+                                )}
+                                {duty.roomLab && (
+                                  <span className="text-slate-400 font-medium text-[10px] flex items-center gap-0.5">
+                                    <MapPin className="w-2.5 h-2.5 text-slate-400" />
+                                    {duty.roomLab}
+                                  </span>
+                                )}
+                              </div>
+                              {duty.notes && (
+                                <div className="mt-1 text-[10px] text-slate-400 italic line-clamp-2">{duty.notes}</div>
+                              )}
+                              {isFullDay && (
+                                <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-blue-300 bg-blue-500/20 border border-blue-500/30 px-1.5 py-0.5 rounded shadow-2xs">
+                                  <Clock className="w-2.5 h-2.5 text-blue-400 shrink-0" />
+                                  <span>09:00 - 16:00 (Full Day)</span>
+                                </div>
+                              )}
+                              <div className="mt-1.5 pt-1 border-t border-blue-100 flex items-center space-x-1 text-[11px] font-semibold text-slate-200">
+                                <div className="w-4 h-4 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[9px]">
+                                  {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
+                                </div>
+                                <span className="truncate">{duty.instructorName}</span>
+                              </div>
                             </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
 
@@ -601,38 +611,47 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                           <span className="text-[10px] text-slate-400 italic">No lectures</span>
                         </div>
                       ) : (
-                        afternoonDuties.map((duty) => (
-                          <div
-                            key={duty.id}
-                            className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-2 shadow-2xs hover:shadow-xs transition-shadow"
-                          >
-                            <div className="text-xs font-bold text-amber-300 line-clamp-2 leading-snug">
-                              {duty.moduleName ?? duty.dutyType}
-                            </div>
-                            <div className="mt-1 flex items-center justify-between text-[11px]">
-                              {duty.batchName && (
-                                <span className="bg-amber-500/25 text-amber-400 font-bold px-1.5 py-0.2 rounded text-[10px]">
-                                  {duty.batchName}
-                                </span>
-                              )}
-                              {duty.roomLab && (
-                                <span className="text-slate-400 font-medium text-[10px] flex items-center gap-0.5">
-                                  <MapPin className="w-2.5 h-2.5 text-slate-400" />
-                                  {duty.roomLab}
-                                </span>
-                              )}
-                            </div>
-                            {duty.notes && (
-                              <div className="mt-1 text-[10px] text-slate-400 italic line-clamp-2">{duty.notes}</div>
-                            )}
-                            <div className="mt-1.5 pt-1 border-t border-amber-100 flex items-center space-x-1 text-[11px] font-semibold text-slate-200">
-                              <div className="w-4 h-4 rounded-full bg-amber-600 text-white font-bold flex items-center justify-center text-[9px]">
-                                {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
+                        afternoonDuties.map((duty) => {
+                          const isFullDay = morningDuties.some((m) => isSameSession(duty, m));
+                          return (
+                            <div
+                              key={duty.id}
+                              className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-2 shadow-2xs hover:shadow-xs transition-shadow"
+                            >
+                              <div className="text-xs font-bold text-amber-300 line-clamp-2 leading-snug">
+                                {duty.moduleName ?? duty.dutyType}
                               </div>
-                              <span className="truncate">{duty.instructorName}</span>
+                              <div className="mt-1 flex items-center justify-between text-[11px]">
+                                {duty.batchName && (
+                                  <span className="bg-amber-500/25 text-amber-400 font-bold px-1.5 py-0.2 rounded text-[10px]">
+                                    {duty.batchName}
+                                  </span>
+                                )}
+                                {duty.roomLab && (
+                                  <span className="text-slate-400 font-medium text-[10px] flex items-center gap-0.5">
+                                    <MapPin className="w-2.5 h-2.5 text-slate-400" />
+                                    {duty.roomLab}
+                                  </span>
+                                )}
+                              </div>
+                              {duty.notes && (
+                                <div className="mt-1 text-[10px] text-slate-400 italic line-clamp-2">{duty.notes}</div>
+                              )}
+                              {isFullDay && (
+                                <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 bg-amber-500/20 border border-amber-500/30 px-1.5 py-0.5 rounded shadow-2xs">
+                                  <Clock className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                                  <span>09:00 - 16:00 (Full Day)</span>
+                                </div>
+                              )}
+                              <div className="mt-1.5 pt-1 border-t border-amber-100 flex items-center space-x-1 text-[11px] font-semibold text-slate-200">
+                                <div className="w-4 h-4 rounded-full bg-amber-600 text-white font-bold flex items-center justify-center text-[9px]">
+                                  {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
+                                </div>
+                                <span className="truncate">{duty.instructorName}</span>
+                              </div>
                             </div>
-                          </div>
-                        ))
+                          );
+                        })
                       )}
                     </div>
 

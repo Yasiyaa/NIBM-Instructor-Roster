@@ -20,6 +20,7 @@ import {
   Info,
 } from 'lucide-react';
 import { submitLeaveAction } from '@/lib/actions';
+import { mergeDutyAssignments } from '@/lib/roster-utils';
 import { useDialog } from './DialogProvider';
 
 interface InstructorPortalProps {
@@ -136,13 +137,14 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
     return `https://calendar.google.com/calendar/render?${params.toString()}`;
   };
 
-  // Filter assignments based on dropdown selection
-  const displayedAssignments = dutyAssignments
-    .filter((a) => {
-      if (selectedInstructorId === 'ALL') return true;
-      return a.instructorId === selectedInstructorId;
-    })
-    .sort((a, b) => a.dutyDate.localeCompare(b.dutyDate) || a.startTime.localeCompare(b.startTime));
+  // Filter assignments based on dropdown selection and merge full-day sessions (09:00 - 16:00)
+  const filteredDuties = dutyAssignments.filter((a) => {
+    if (selectedInstructorId === 'ALL') return true;
+    return a.instructorId === selectedInstructorId;
+  });
+  const displayedAssignments = mergeDutyAssignments(filteredDuties).sort(
+    (a, b) => a.dutyDate.localeCompare(b.dutyDate) || a.startTime.localeCompare(b.startTime)
+  );
 
   // Filter night shifts
   const displayedNightShifts = nightShifts
@@ -449,8 +451,16 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
                             day: 'numeric',
                           })}
                         </span>
-                        <span className="text-[11px] font-bold bg-purple-500/15 text-purple-400 px-2 py-0.5 rounded-full">
-                          {a.startTime} - {a.endTime}
+                        <span
+                          className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                            a.startTime === '09:00' && a.endTime === '16:00'
+                              ? 'bg-purple-500/25 text-purple-300 border border-purple-500/30'
+                              : 'bg-purple-500/15 text-purple-400'
+                          }`}
+                        >
+                          {a.startTime === '09:00' && a.endTime === '16:00'
+                            ? '09:00 - 16:00 (Full Day)'
+                            : `${a.startTime} - ${a.endTime}`}
                         </span>
                       </div>
 

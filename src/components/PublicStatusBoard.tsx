@@ -221,7 +221,9 @@ export const PublicStatusBoard: React.FC<PublicStatusBoardProps> = ({
                         )}
                       </div>
                       <span className="text-[11px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60">
-                        {assignment.startTime} - {assignment.endTime}
+                        {assignment.startTime === '09:00' && assignment.endTime === '16:00'
+                          ? '09:00 - 16:00 (Full Day)'
+                          : `${assignment.startTime} - ${assignment.endTime}`}
                       </span>
                     </div>
 

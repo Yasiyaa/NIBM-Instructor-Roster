@@ -22,6 +22,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Copy,
+  Clock,
   Phone,
   MessageCircle,
   ClipboardCopy,
@@ -51,6 +52,7 @@ import {
   removeDutyTypeAction,
   updateDutyTypeAction,
 } from '@/lib/actions';
+import { getMatchingOppositeSlotDuty, mergeDutyAssignments } from '@/lib/roster-utils';
 import { useDialog } from './DialogProvider';
 
 interface SundayPlannerProps {
@@ -582,8 +584,11 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
   const getInstructorWeekEntries = (instId: string) => {
     return weekDays
       .map((day) => {
-        const items: string[] = dutyAssignments
-          .filter((a) => a.instructorId === instId && a.dutyDate === day.dateStr)
+        const dayDuties = dutyAssignments.filter(
+          (a) => a.instructorId === instId && a.dutyDate === day.dateStr
+        );
+        const mergedDayDuties = mergeDutyAssignments(dayDuties);
+        const items: string[] = mergedDayDuties
           .sort((a, b) => a.startTime.localeCompare(b.startTime))
           .map((a) => {
             const label = a.batchName || a.moduleName ? `${a.batchName || ''} — ${a.moduleName || ''}` : a.dutyType;
@@ -955,9 +960,12 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                     {dayAssignments
                       .filter((a) => a.startTime === '09:00')
                       .map((assignment) => {
-                        const hasAfternoon = dayAssignments.some(
-                          (other) => other.instructorId === assignment.instructorId && other.startTime === '13:00'
-                        );
+                        const matchingAfternoon = getMatchingOppositeSlotDuty(assignment, dayAssignments);
+                        const hasAfternoon =
+                          Boolean(matchingAfternoon) ||
+                          dayAssignments.some(
+                            (other) => other.instructorId === assignment.instructorId && other.startTime === '13:00'
+                          );
 
                         return (
                           <div
@@ -1014,12 +1022,17 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                               )}
                             </div>
 
-                            {hasAfternoon && (
+                            {matchingAfternoon ? (
+                              <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-emerald-300 bg-emerald-500/20 border border-emerald-500/30 px-1.5 py-0.5 rounded shadow-2xs">
+                                <Clock className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                                <span>09:00 - 16:00 (Full Day)</span>
+                              </div>
+                            ) : hasAfternoon ? (
                               <div className="mt-1.5 text-[9px] font-semibold text-emerald-400/80 flex items-center space-x-1">
                                 <CheckCircle2 className="w-2.5 h-2.5" />
                                 <span>Also in Afternoon</span>
                               </div>
-                            )}
+                            ) : null}
                           </div>
                         );
                       })}
@@ -1051,9 +1064,12 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                     {dayAssignments
                       .filter((a) => a.startTime === '13:00')
                       .map((assignment) => {
-                        const hasMorning = dayAssignments.some(
-                          (other) => other.instructorId === assignment.instructorId && other.startTime === '09:00'
-                        );
+                        const matchingMorning = getMatchingOppositeSlotDuty(assignment, dayAssignments);
+                        const hasMorning =
+                          Boolean(matchingMorning) ||
+                          dayAssignments.some(
+                            (other) => other.instructorId === assignment.instructorId && other.startTime === '09:00'
+                          );
 
                         return (
                           <div
@@ -1110,12 +1126,17 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                               )}
                             </div>
 
-                            {hasMorning && (
+                            {matchingMorning ? (
+                              <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-blue-300 bg-blue-500/20 border border-blue-500/30 px-1.5 py-0.5 rounded shadow-2xs">
+                                <Clock className="w-2.5 h-2.5 text-blue-400 shrink-0" />
+                                <span>09:00 - 16:00 (Full Day)</span>
+                              </div>
+                            ) : hasMorning ? (
                               <div className="mt-1.5 text-[9px] font-semibold text-blue-400/80 flex items-center space-x-1">
                                 <CheckCircle2 className="w-2.5 h-2.5" />
                                 <span>Also in Morning</span>
                               </div>
-                            )}
+                            ) : null}
                           </div>
                         );
                       })}

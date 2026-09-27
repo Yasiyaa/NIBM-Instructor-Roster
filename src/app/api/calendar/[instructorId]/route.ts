@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserById, getDutyAssignments, getNightShifts } from '@/lib/storage';
+import { mergeDutyAssignments } from '@/lib/roster-utils';
 import { DutyAssignment, NightShift, User } from '@/types';
 
 // Subscription feeds must always reflect the live roster, so this route
@@ -86,8 +87,9 @@ function buildNightShiftEvent(s: NightShift, dtstamp: string): string {
 
 function buildICS(instructor: User, dutyAssignments: DutyAssignment[], nightShifts: NightShift[]): string {
   const dtstamp = toICSTimestampUTC(new Date());
+  const mergedDuties = mergeDutyAssignments(dutyAssignments);
   const events = [
-    ...dutyAssignments.map((a) => buildDutyEvent(a, dtstamp)),
+    ...mergedDuties.map((a) => buildDutyEvent(a, dtstamp)),
     ...nightShifts.map((s) => buildNightShiftEvent(s, dtstamp)),
   ];
 

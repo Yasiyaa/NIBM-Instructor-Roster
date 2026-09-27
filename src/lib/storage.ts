@@ -13,6 +13,7 @@ import {
   AcademicCatalog,
 } from '@/types';
 import { getMondayOfCurrentWeek, getSundayOfWeek } from './seed-data';
+import { mergeDutyAssignments } from './roster-utils';
 
 const SALT_ROUNDS = 10;
 const CATALOG_ID = 'singleton';
@@ -845,16 +846,17 @@ export async function getExecutiveStatus(
     where: { dutyDate: dateStr },
     include: { instructor: true },
   });
+  const mappedDutiesRaw = dayAssignmentsRaw.map(mapDuty);
   const dayAssignments =
     slotLabelFilter && slotLabelFilter !== 'ALL'
-      ? dayAssignmentsRaw.filter((a) => a.slotLabel.includes(slotLabelFilter) || a.startTime === slotLabelFilter)
-      : dayAssignmentsRaw;
+      ? mappedDutiesRaw.filter((a) => a.slotLabel.includes(slotLabelFilter) || a.startTime === slotLabelFilter)
+      : mergeDutyAssignments(mappedDutiesRaw);
 
   const onDutyIds = new Set(dayAssignments.map((a) => a.instructorId));
   const onDutyInstructors = dayAssignments
     .map((a) => {
       const inst = allInstructors.find((i) => i.id === a.instructorId);
-      return inst ? { instructor: inst, assignment: mapDuty(a) } : null;
+      return inst ? { instructor: inst, assignment: a } : null;
     })
     .filter(Boolean) as Array<{ instructor: User; assignment: DutyAssignment }>;
 
