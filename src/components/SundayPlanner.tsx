@@ -31,6 +31,7 @@ import {
   LibraryBig,
   Pencil,
   Check,
+  FileText,
 } from 'lucide-react';
 import {
   addDutyAction,
@@ -760,7 +761,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                 type="date"
                 value={planningStartDate}
                 onChange={(e) => handleDateChange(e.target.value)}
-                className="bg-slate-800 text-white text-xs font-bold border border-slate-700 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                className="bg-slate-800 text-white text-xs font-bold border border-slate-700 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer [color-scheme:dark]"
               />
               <span className="text-xs text-slate-400 font-normal hidden sm:inline">
                 → {weekDays[6]?.formattedDate} ({weekDays[6]?.dateStr})
@@ -846,7 +847,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2">
           {allInstructors.map((inst) => {
             const data = workloadMap[inst.id] || { sessions: 0, nightShifts: 0 };
             return (
@@ -1013,7 +1014,13 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                                 {assignment.moduleName ?? assignment.dutyType}
                               </div>
                               {assignment.notes && (
-                                <div className="text-[9px] text-slate-500 italic truncate">{assignment.notes}</div>
+                                <div
+                                  className="mt-0.5 inline-flex items-center gap-1 text-[9px] text-slate-300 bg-slate-800/80 px-1 py-0.2 rounded border border-slate-700/60 max-w-full cursor-help"
+                                  title={`Notes: ${assignment.notes}`}
+                                >
+                                  <FileText className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                                  <span className="truncate max-w-[120px]">{assignment.notes}</span>
+                                </div>
                               )}
                               {assignment.roomLab && (
                                 <div className="text-[9px] text-slate-500 mt-0.5">
@@ -1117,7 +1124,13 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                                 {assignment.moduleName ?? assignment.dutyType}
                               </div>
                               {assignment.notes && (
-                                <div className="text-[9px] text-slate-500 italic truncate">{assignment.notes}</div>
+                                <div
+                                  className="mt-0.5 inline-flex items-center gap-1 text-[9px] text-slate-300 bg-slate-800/80 px-1 py-0.2 rounded border border-slate-700/60 max-w-full cursor-help"
+                                  title={`Notes: ${assignment.notes}`}
+                                >
+                                  <FileText className="w-2.5 h-2.5 text-blue-400 shrink-0" />
+                                  <span className="truncate max-w-[120px]">{assignment.notes}</span>
+                                </div>
                               )}
                               {assignment.roomLab && (
                                 <div className="text-[9px] text-slate-500 mt-0.5">
@@ -1191,7 +1204,13 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                               {assignment.moduleName ?? assignment.dutyType}
                             </div>
                             {assignment.notes && (
-                              <div className="text-[9px] text-slate-400 italic truncate">{assignment.notes}</div>
+                              <div
+                                className="mt-0.5 inline-flex items-center gap-1 text-[9px] text-slate-300 bg-slate-800/80 px-1 py-0.2 rounded border border-slate-700/60 max-w-full cursor-help"
+                                title={`Notes: ${assignment.notes}`}
+                              >
+                                <FileText className="w-2.5 h-2.5 text-purple-400 shrink-0" />
+                                <span className="truncate max-w-[120px]">{assignment.notes}</span>
+                              </div>
                             )}
                             {assignment.roomLab && (
                               <div className="text-[9px] text-slate-500 mt-0.5">

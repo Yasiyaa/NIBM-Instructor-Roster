@@ -214,7 +214,7 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
               </h2>
               <p className="text-xs text-slate-300 mt-0.5">
                 {isSharedKiosk
-                  ? 'Shared terminal for the 8 team members • Check assigned lectures, night shifts & apply for holiday'
+                  ? `Shared terminal for the ${allInstructors.length} team members • Check assigned lectures, night shifts & apply for holiday`
                   : 'Check your assigned lectures, night shifts & apply for holiday'}
               </p>
             </div>

@@ -109,7 +109,7 @@ export const PublicStatusBoard: React.FC<PublicStatusBoardProps> = ({
                   type="date"
                   value={selectedDate}
                   onChange={(e) => handleFilterChange(e.target.value, slotFilter)}
-                  className="bg-slate-900 text-xs text-slate-300 border border-slate-700 rounded-lg px-2 py-1 focus:outline-none cursor-pointer"
+                  className="bg-slate-900 text-xs text-slate-300 border border-slate-700 rounded-lg px-2 py-1 focus:outline-none cursor-pointer [color-scheme:dark]"
                 />
               </div>
             </div>

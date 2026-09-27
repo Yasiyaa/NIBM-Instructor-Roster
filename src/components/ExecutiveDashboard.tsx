@@ -246,7 +246,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                 type="date"
                 value={selectedDate}
                 onChange={(e) => handleFilterChange(e.target.value, slotFilter)}
-                className="bg-transparent text-white text-sm font-semibold focus:outline-none cursor-pointer"
+                className="bg-transparent text-white text-sm font-semibold focus:outline-none cursor-pointer [color-scheme:dark]"
               />
             </div>
             <button
@@ -254,7 +254,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                 const today = new Date().toISOString().split('T')[0];
                 handleFilterChange(today, slotFilter);
               }}
-              className="text-xs bg-blue-600 hover:bg-blue-500 text-white font-medium px-2.5 py-1.5 rounded-lg transition-colors ml-1"
+              className="text-xs bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1.5 rounded-lg transition-colors ml-1 cursor-pointer shadow-xs active:scale-95"
             >
               Today
             </button>
@@ -273,10 +273,10 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
             <button
               key={pill.id}
               onClick={() => handleFilterChange(selectedDate, pill.id)}
-              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${
+              className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
                 slotFilter === pill.id
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700/80 border border-slate-700/60'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700/80'
               }`}
             >
               {pill.label}
