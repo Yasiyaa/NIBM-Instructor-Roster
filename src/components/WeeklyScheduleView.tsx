@@ -229,7 +229,7 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 print:space-y-3">
       {/* Top Banner & Week Controller */}
       <div className="bg-slate-900 rounded-2xl p-6 text-white border border-slate-800 print:hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
@@ -370,12 +370,25 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
       </div>
 
       {/* Printable Header (Visible only when printing) */}
-      <div className="hidden print:block mb-4 p-4 border-b border-slate-700">
-        <h1 className="text-xl font-black text-slate-100">National Institute of Business Management (NIBM)</h1>
-        <h2 className="text-base font-bold text-slate-300">School of Computing — Instructor Duty Roster</h2>
-        <p className="text-xs text-slate-400">
-          Week: {planningStartDate} to {weekEndDate} | Status: {rosterWeek.status}
-        </p>
+      <div className="hidden print:block mb-3 pb-2.5 border-b-2 border-slate-900">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-slate-600">
+              National Institute of Business Management • School of Computing
+            </div>
+            <h1 className="text-lg font-black text-slate-950 tracking-tight">
+              Faculty Academic & Duty Timetable
+            </h1>
+          </div>
+          <div className="text-right">
+            <div className="text-xs font-bold text-slate-900">
+              Week: {planningStartDate} → {weekEndDate}
+            </div>
+            <div className="text-[10px] text-slate-600 font-medium">
+              Status: <span className="font-bold text-slate-900">{rosterWeek.status}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* High-Level Weekly KPI Metrics */}
@@ -430,8 +443,8 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
       </div>
 
       {/* 7-Day Master Roster Matrix */}
-      <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-800/60">
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-sm overflow-hidden print:bg-white print:border-0 print:rounded-none print:shadow-none print:m-0 print:p-0">
+        <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-800/60 print:hidden">
           <div>
             <h3 className="font-bold text-slate-100 text-base flex items-center gap-2">
               <Calendar className="w-4 h-4 text-blue-600" />
@@ -456,7 +469,7 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
         </div>
 
         {/* 7-Column Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 divide-y lg:divide-y-0 lg:divide-x divide-slate-800 bg-slate-800">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 print:grid-cols-7 divide-y lg:divide-y-0 lg:divide-x print:divide-y-0 print:divide-x divide-slate-800 print:divide-slate-300 bg-slate-800 print:bg-white print:border print:border-slate-300 print:rounded-lg print:overflow-hidden print:w-full">
           {weekDays.map((day) => {
             // Find morning assignments for this day
             const morningDuties = filteredAssignments.filter(
@@ -485,29 +498,29 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
             return (
               <div
                 key={day.dateStr}
-                className={`bg-slate-900 flex flex-col min-h-[520px] ${
-                  day.isToday ? 'ring-2 ring-blue-500 z-10' : ''
+                className={`bg-slate-900 print:bg-white flex flex-col min-h-[520px] print:min-h-0 print-avoid-break ${
+                  day.isToday ? 'ring-2 ring-blue-500 z-10 print:ring-0' : ''
                 }`}
               >
                 {/* Column Header */}
                 <div
-                  className={`p-3 border-b border-slate-800 text-center ${
+                  className={`p-3 print:p-1.5 border-b border-slate-800 print:border-b-2 print:border-slate-300 text-center ${
                     day.isToday
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-blue-600 text-white print:bg-slate-100 print:text-slate-950'
                       : day.isSunday
-                      ? 'bg-purple-500/10 text-purple-300'
-                      : 'bg-slate-800/60 text-slate-200'
+                      ? 'bg-purple-500/10 text-purple-300 print:bg-purple-50 print:text-purple-950'
+                      : 'bg-slate-800/60 text-slate-200 print:bg-slate-100 print:text-slate-950'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black uppercase tracking-wider">{day.dayName}</span>
+                  <div className="flex items-center justify-between print:justify-center">
+                    <span className="text-xs print:text-[11px] font-black uppercase tracking-wider">{day.dayName}</span>
                     {day.isToday && (
-                      <span className="text-[9px] bg-slate-900 text-blue-400 font-bold px-1.5 py-0.2 rounded-full uppercase">
+                      <span className="text-[9px] bg-slate-900 text-blue-400 font-bold px-1.5 py-0.2 rounded-full uppercase print:hidden">
                         Today
                       </span>
                     )}
                   </div>
-                  <div className="text-sm font-black mt-0.5">{day.formattedDate}</div>
+                  <div className="text-sm print:text-xs font-black mt-0.5">{day.formattedDate}</div>
 
                   {/* Drilldown button to Daily Cockpit */}
                   {onSelectDateForCockpit && (
@@ -527,25 +540,25 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                 </div>
 
                 {/* Day Slots Container */}
-                <div className="p-2 space-y-3 flex-1 flex flex-col justify-between">
-                  <div className="space-y-3">
+                <div className="p-2 print:p-1 space-y-3 print:space-y-1 flex-1 flex flex-col justify-between">
+                  <div className="space-y-3 print:space-y-1">
                     {/* 1. MORNING SLOT (09:00 - 12:00) */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 uppercase tracking-wider px-1">
+                    <div className="space-y-1.5 print:space-y-0.5">
+                      <div className="flex items-center justify-between text-[11px] print:text-[9.5px] font-bold text-slate-300 print:text-slate-800 uppercase tracking-wider px-1">
                         <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-blue-600" />
+                          <Clock className="w-3 h-3 text-blue-600 print:text-blue-700" />
                           <span>09:00 - 12:00</span>
                         </span>
                         {morningDuties.length > 0 && (
-                          <span className="text-[10px] font-semibold text-blue-400 bg-blue-500/10 px-1 rounded">
+                          <span className="text-[10px] print:text-[8px] font-semibold text-blue-400 print:text-blue-900 bg-blue-500/10 print:bg-blue-100 px-1 rounded">
                             {morningDuties.length}
                           </span>
                         )}
                       </div>
 
                       {morningDuties.length === 0 ? (
-                        <div className="bg-slate-800/60 rounded-lg p-2 border border-dashed border-slate-800 text-center">
-                          <span className="text-[10px] text-slate-400 italic">No lectures</span>
+                        <div className="bg-slate-800/60 print:bg-slate-50 rounded-lg print:rounded p-2 print:p-1 border border-dashed border-slate-800 print:border-slate-300 text-center">
+                          <span className="text-[10px] print:text-[8.5px] text-slate-400 print:text-slate-500 italic">No lectures</span>
                         </div>
                       ) : (
                         morningDuties.map((duty) => {
@@ -553,35 +566,35 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                           return (
                             <div
                               key={duty.id}
-                              className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-2 shadow-2xs hover:shadow-xs transition-shadow"
+                              className="bg-blue-500/10 print:bg-blue-50/80 border border-blue-500/20 print:border-blue-300 rounded-lg print:rounded p-2 print:p-1 shadow-2xs hover:shadow-xs transition-shadow print:shadow-none print-avoid-break"
                             >
-                              <div className="text-xs font-bold text-blue-300 line-clamp-2 leading-snug">
+                              <div className="text-xs print:text-[9.5px] font-bold text-blue-300 print:text-blue-950 line-clamp-2 leading-snug">
                                 {duty.moduleName ?? duty.dutyType}
                               </div>
-                              <div className="mt-1 flex items-center justify-between text-[11px]">
+                              <div className="mt-1 print:mt-0.5 flex items-center justify-between text-[11px] print:text-[8.5px]">
                                 {duty.batchName && (
-                                  <span className="bg-blue-500/25 text-blue-400 font-bold px-1.5 py-0.2 rounded text-[10px]">
+                                  <span className="bg-blue-500/25 print:bg-blue-200 text-blue-400 print:text-blue-900 font-bold px-1.5 py-0.2 rounded text-[10px] print:text-[8px]">
                                     {duty.batchName}
                                   </span>
                                 )}
                                 {duty.roomLab && (
-                                  <span className="text-slate-400 font-medium text-[10px] flex items-center gap-0.5">
-                                    <MapPin className="w-2.5 h-2.5 text-slate-400" />
+                                  <span className="text-slate-400 print:text-slate-600 font-medium text-[10px] print:text-[8.5px] flex items-center gap-0.5">
+                                    <MapPin className="w-2.5 h-2.5 text-slate-400 print:text-slate-600" />
                                     {duty.roomLab}
                                   </span>
                                 )}
                               </div>
                               {duty.notes && (
-                                <div className="mt-1 text-[10px] text-slate-400 italic line-clamp-2">{duty.notes}</div>
+                                <div className="mt-1 print:mt-0.5 text-[10px] print:text-[8px] text-slate-400 print:text-slate-600 italic line-clamp-2">{duty.notes}</div>
                               )}
                               {isFullDay && (
-                                <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-blue-300 bg-blue-500/20 border border-blue-500/30 px-1.5 py-0.5 rounded shadow-2xs">
-                                  <Clock className="w-2.5 h-2.5 text-blue-400 shrink-0" />
+                                <div className="mt-1.5 print:mt-0.5 inline-flex items-center gap-1 text-[10px] print:text-[8px] font-bold text-blue-300 print:text-indigo-950 bg-blue-500/20 print:bg-indigo-100 border border-blue-500/30 print:border-indigo-300 px-1.5 py-0.5 print:py-0.2 rounded shadow-2xs">
+                                  <Clock className="w-2.5 h-2.5 text-blue-400 print:text-indigo-700 shrink-0" />
                                   <span>09:00 - 16:00 (Full Day)</span>
                                 </div>
                               )}
-                              <div className="mt-1.5 pt-1 border-t border-blue-100 flex items-center space-x-1 text-[11px] font-semibold text-slate-200">
-                                <div className="w-4 h-4 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[9px]">
+                              <div className="mt-1.5 print:mt-0.5 pt-1 border-t border-blue-100/20 print:border-blue-200 flex items-center space-x-1 text-[11px] print:text-[8.5px] font-semibold text-slate-200 print:text-slate-800">
+                                <div className="w-4 h-4 print:w-3.5 print:h-3.5 rounded-full bg-blue-600 print:bg-blue-700 text-white font-bold flex items-center justify-center text-[9px] print:text-[7.5px] shrink-0">
                                   {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
                                 </div>
                                 <span className="truncate">{duty.instructorName}</span>
@@ -593,22 +606,22 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                     </div>
 
                     {/* 2. AFTERNOON SLOT (13:00 - 16:00) */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 uppercase tracking-wider px-1">
+                    <div className="space-y-1.5 print:space-y-0.5">
+                      <div className="flex items-center justify-between text-[11px] print:text-[9.5px] font-bold text-slate-300 print:text-slate-800 uppercase tracking-wider px-1">
                         <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-amber-600" />
+                          <Clock className="w-3 h-3 text-amber-600 print:text-amber-700" />
                           <span>13:00 - 16:00</span>
                         </span>
                         {afternoonDuties.length > 0 && (
-                          <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-1 rounded">
+                          <span className="text-[10px] print:text-[8px] font-semibold text-amber-400 print:text-amber-900 bg-amber-500/10 print:bg-amber-100 px-1 rounded">
                             {afternoonDuties.length}
                           </span>
                         )}
                       </div>
 
                       {afternoonDuties.length === 0 ? (
-                        <div className="bg-slate-800/60 rounded-lg p-2 border border-dashed border-slate-800 text-center">
-                          <span className="text-[10px] text-slate-400 italic">No lectures</span>
+                        <div className="bg-slate-800/60 print:bg-slate-50 rounded-lg print:rounded p-2 print:p-1 border border-dashed border-slate-800 print:border-slate-300 text-center">
+                          <span className="text-[10px] print:text-[8.5px] text-slate-400 print:text-slate-500 italic">No lectures</span>
                         </div>
                       ) : (
                         afternoonDuties.map((duty) => {
@@ -616,35 +629,35 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                           return (
                             <div
                               key={duty.id}
-                              className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-2 shadow-2xs hover:shadow-xs transition-shadow"
+                              className="bg-amber-500/10 print:bg-amber-50/80 border border-amber-500/20 print:border-amber-300 rounded-lg print:rounded p-2 print:p-1 shadow-2xs hover:shadow-xs transition-shadow print:shadow-none print-avoid-break"
                             >
-                              <div className="text-xs font-bold text-amber-300 line-clamp-2 leading-snug">
+                              <div className="text-xs print:text-[9.5px] font-bold text-amber-300 print:text-amber-950 line-clamp-2 leading-snug">
                                 {duty.moduleName ?? duty.dutyType}
                               </div>
-                              <div className="mt-1 flex items-center justify-between text-[11px]">
+                              <div className="mt-1 print:mt-0.5 flex items-center justify-between text-[11px] print:text-[8.5px]">
                                 {duty.batchName && (
-                                  <span className="bg-amber-500/25 text-amber-400 font-bold px-1.5 py-0.2 rounded text-[10px]">
+                                  <span className="bg-amber-500/25 print:bg-amber-200 text-amber-400 print:text-amber-900 font-bold px-1.5 py-0.2 rounded text-[10px] print:text-[8px]">
                                     {duty.batchName}
                                   </span>
                                 )}
                                 {duty.roomLab && (
-                                  <span className="text-slate-400 font-medium text-[10px] flex items-center gap-0.5">
-                                    <MapPin className="w-2.5 h-2.5 text-slate-400" />
+                                  <span className="text-slate-400 print:text-slate-600 font-medium text-[10px] print:text-[8.5px] flex items-center gap-0.5">
+                                    <MapPin className="w-2.5 h-2.5 text-slate-400 print:text-slate-600" />
                                     {duty.roomLab}
                                   </span>
                                 )}
                               </div>
                               {duty.notes && (
-                                <div className="mt-1 text-[10px] text-slate-400 italic line-clamp-2">{duty.notes}</div>
+                                <div className="mt-1 print:mt-0.5 text-[10px] print:text-[8px] text-slate-400 print:text-slate-600 italic line-clamp-2">{duty.notes}</div>
                               )}
                               {isFullDay && (
-                                <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-bold text-amber-300 bg-amber-500/20 border border-amber-500/30 px-1.5 py-0.5 rounded shadow-2xs">
-                                  <Clock className="w-2.5 h-2.5 text-amber-400 shrink-0" />
+                                <div className="mt-1.5 print:mt-0.5 inline-flex items-center gap-1 text-[10px] print:text-[8px] font-bold text-amber-300 print:text-amber-950 bg-amber-500/20 print:bg-amber-100 border border-amber-500/30 print:border-amber-300 px-1.5 py-0.5 print:py-0.2 rounded shadow-2xs">
+                                  <Clock className="w-2.5 h-2.5 text-amber-400 print:text-amber-700 shrink-0" />
                                   <span>09:00 - 16:00 (Full Day)</span>
                                 </div>
                               )}
-                              <div className="mt-1.5 pt-1 border-t border-amber-100 flex items-center space-x-1 text-[11px] font-semibold text-slate-200">
-                                <div className="w-4 h-4 rounded-full bg-amber-600 text-white font-bold flex items-center justify-center text-[9px]">
+                              <div className="mt-1.5 print:mt-1 pt-1 border-t border-amber-100/20 print:border-amber-200 flex items-center space-x-1 text-[11px] print:text-[8.5px] font-semibold text-slate-200 print:text-slate-800">
+                                <div className="w-4 h-4 print:w-3.5 print:h-3.5 rounded-full bg-amber-600 print:bg-amber-700 text-white font-bold flex items-center justify-center text-[9px] print:text-[7.5px] shrink-0">
                                   {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
                                 </div>
                                 <span className="truncate">{duty.instructorName}</span>
@@ -657,44 +670,44 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
 
                     {/* 3. SUNDAY CCS SPECIAL SLOT (16:30 - 17:30) */}
                     {day.isSunday && (
-                      <div className="space-y-1.5 pt-1">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-purple-400 uppercase tracking-wider px-1">
+                      <div className="space-y-1.5 print:space-y-0.5 pt-1">
+                        <div className="flex items-center justify-between text-[11px] print:text-[9.5px] font-bold text-purple-400 print:text-purple-800 uppercase tracking-wider px-1">
                           <span className="flex items-center gap-1">
-                            <Sparkles className="w-3 h-3 text-purple-600" />
+                            <Sparkles className="w-3 h-3 text-purple-600 shrink-0" />
                             <span>Sunday CCS (16:30 - 17:30)</span>
                           </span>
                         </div>
 
                         {sundayDuties.length === 0 ? (
-                          <div className="bg-purple-500/10 rounded-lg p-2 border border-dashed border-purple-500/20 text-center">
-                            <span className="text-[10px] text-purple-400 italic">No CCS session</span>
+                          <div className="bg-purple-500/10 print:bg-purple-50/50 rounded-lg print:rounded p-2 print:p-1 border border-dashed border-purple-500/20 print:border-purple-200 text-center">
+                            <span className="text-[10px] print:text-[8.5px] text-purple-400 print:text-purple-600 italic">No CCS session</span>
                           </div>
                         ) : (
                           sundayDuties.map((duty) => (
                             <div
                               key={duty.id}
-                              className="bg-purple-500/15 border border-purple-500/20 rounded-lg p-2 shadow-2xs"
+                              className="bg-purple-500/15 print:bg-purple-50/80 border border-purple-500/20 print:border-purple-300 rounded-lg print:rounded p-2 print:p-1 shadow-2xs print:shadow-none print-avoid-break"
                             >
-                              <div className="text-xs font-bold text-purple-300 leading-snug">
+                              <div className="text-xs print:text-[9.5px] font-bold text-purple-300 print:text-purple-950 leading-snug">
                                 {duty.moduleName ?? duty.dutyType}
                               </div>
-                              <div className="mt-1 flex items-center justify-between text-[11px]">
+                              <div className="mt-1 print:mt-0.5 flex items-center justify-between text-[11px] print:text-[8.5px]">
                                 {duty.batchName && (
-                                  <span className="bg-purple-500/25 text-purple-400 font-black px-1.5 py-0.2 rounded text-[10px]">
+                                  <span className="bg-purple-500/25 print:bg-purple-200 text-purple-400 print:text-purple-900 font-black px-1.5 py-0.2 rounded text-[10px] print:text-[8px]">
                                     {duty.batchName}
                                   </span>
                                 )}
                                 {duty.roomLab && (
-                                  <span className="text-slate-400 font-medium text-[10px]">
+                                  <span className="text-slate-400 print:text-slate-600 font-medium text-[10px] print:text-[8.5px]">
                                     {duty.roomLab}
                                   </span>
                                 )}
                               </div>
                               {duty.notes && (
-                                <div className="mt-1 text-[10px] text-slate-400 italic line-clamp-2">{duty.notes}</div>
+                                <div className="mt-1 print:mt-0.5 text-[10px] print:text-[8px] text-slate-400 print:text-slate-600 italic line-clamp-2">{duty.notes}</div>
                               )}
-                              <div className="mt-1.5 pt-1 border-t border-purple-500/20 flex items-center space-x-1 text-[11px] font-semibold text-purple-300">
-                                <div className="w-4 h-4 rounded-full bg-purple-700 text-white font-bold flex items-center justify-center text-[9px]">
+                              <div className="mt-1.5 print:mt-1 pt-1 border-t border-purple-500/20 print:border-purple-200 flex items-center space-x-1 text-[11px] print:text-[8.5px] font-semibold text-purple-300 print:text-purple-900">
+                                <div className="w-4 h-4 print:w-3.5 print:h-3.5 rounded-full bg-purple-700 print:bg-purple-800 text-white font-bold flex items-center justify-center text-[9px] print:text-[7.5px] shrink-0">
                                   {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
                                 </div>
                                 <span className="truncate">{duty.instructorName}</span>
@@ -707,46 +720,51 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                   </div>
 
                   {/* BOTTOM SECTION: NIGHT SHIFT & LEAVES */}
-                  <div className="pt-2 border-t border-slate-800 space-y-2">
+                  <div className="pt-2 print:pt-1 border-t border-slate-800 print:border-slate-300 space-y-2 print:space-y-1">
                     {/* Night Shift Officer */}
-                    <div className="bg-indigo-950 text-white rounded-lg p-2 text-xs">
-                      <div className="flex items-center justify-between text-[10px] font-bold text-indigo-300 uppercase tracking-wider">
+                    <div className="bg-indigo-950 print:bg-indigo-50/80 text-white print:text-indigo-950 rounded-lg print:rounded p-2 print:p-1 text-xs print:border print:border-indigo-200 print-avoid-break">
+                      <div className="flex items-center justify-between text-[10px] print:text-[9px] font-bold text-indigo-300 print:text-indigo-800 uppercase tracking-wider">
                         <span className="flex items-center gap-1">
-                          <Moon className="w-3 h-3 text-amber-300" />
+                          <Moon className="w-3 h-3 text-amber-300 print:text-indigo-600 shrink-0" />
                           <span>Night Shift</span>
                         </span>
                       </div>
-                      <div className="mt-1 font-bold text-white text-[11px] truncate">
+                      <div className="mt-1 font-bold text-white print:text-indigo-950 text-[11px] print:text-[9.5px] truncate">
                         {nightInstructor ? (
-                          <span className="text-amber-300">{nightInstructor.fullName}</span>
+                          <span className="text-amber-300 print:text-indigo-900">{nightInstructor.fullName}</span>
                         ) : (
-                          <span className="text-slate-400 italic font-normal text-[10px]">Not Assigned</span>
+                          <span className="text-slate-400 print:text-slate-500 italic font-normal text-[10px] print:text-[8.5px]">Not Assigned</span>
                         )}
                       </div>
                       {nightInstructor?.phone && (
-                        <a
-                          href={`tel:${nightInstructor.phone.replace(/\s+/g, '')}`}
-                          className="inline-flex items-center gap-1 text-[10px] text-amber-300 hover:text-white mt-1 bg-indigo-900/80 hover:bg-indigo-800 px-2 py-0.5 rounded font-bold transition-colors cursor-pointer"
-                          title={`Call ${nightInstructor.fullName}`}
-                        >
-                          <Phone className="w-2.5 h-2.5" />
-                          <span>Call: {nightInstructor.phone}</span>
-                        </a>
+                        <div className="mt-0.5 text-[10px] print:text-[8px] text-slate-300 print:text-slate-600 truncate">
+                          <span className="print:hidden">
+                            <a
+                              href={`tel:${nightInstructor.phone.replace(/\s+/g, '')}`}
+                              className="inline-flex items-center gap-1 text-[10px] text-amber-300 hover:text-white mt-1 bg-indigo-900/80 hover:bg-indigo-800 px-2 py-0.5 rounded font-bold transition-colors cursor-pointer"
+                              title={`Call ${nightInstructor.fullName}`}
+                            >
+                              <Phone className="w-2.5 h-2.5" />
+                              <span>Call: {nightInstructor.phone}</span>
+                            </a>
+                          </span>
+                          <span className="hidden print:inline">📞 {nightInstructor.phone}</span>
+                        </div>
                       )}
                     </div>
 
                     {/* Approved Leaves On This Date */}
                     {dayLeaves.length > 0 && (
-                      <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-1.5">
-                        <div className="text-[10px] font-bold text-rose-400 uppercase flex items-center gap-1">
-                          <AlertCircle className="w-2.5 h-2.5 text-rose-600" />
+                      <div className="bg-rose-500/10 print:bg-rose-50/80 border border-rose-500/20 print:border-rose-200 rounded-lg print:rounded p-1.5 print:p-1 print-avoid-break">
+                        <div className="text-[10px] print:text-[8.5px] font-bold text-rose-400 print:text-rose-800 uppercase flex items-center gap-1">
+                          <AlertCircle className="w-2.5 h-2.5 text-rose-600 shrink-0" />
                           <span>On Leave ({dayLeaves.length})</span>
                         </div>
                         <div className="mt-1 space-y-0.5">
                           {dayLeaves.map((l) => (
                             <div
                               key={l.id}
-                              className="text-[10px] font-medium text-rose-400 bg-rose-500/15 px-1 py-0.5 rounded truncate"
+                              className="text-[10px] print:text-[8px] font-medium text-rose-400 print:text-rose-900 bg-rose-500/15 print:bg-rose-100 px-1 py-0.2 rounded truncate"
                               title={`${l.instructorName}: ${l.reason}`}
                             >
                               {l.instructorName}
@@ -764,62 +782,62 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
       </div>
 
       {/* Cadre Deployment & Workload Summary Table */}
-      <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-800/60">
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-sm overflow-hidden print:bg-white print:border print:border-slate-300 print:rounded-lg print:shadow-none print-page-break print:mt-4">
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-800/60 print:bg-slate-100 print:border-b print:border-slate-300 print:p-2.5">
           <div>
-            <h3 className="font-bold text-slate-100 text-base flex items-center gap-2">
-              <Users className="w-4 h-4 text-blue-600" />
+            <h3 className="font-bold text-slate-100 text-base flex items-center gap-2 print:text-slate-900 print:text-xs">
+              <Users className="w-4 h-4 text-blue-600 print:text-blue-700" />
               <span>Instructor Cadre Weekly Workload & Deployment Table</span>
             </h3>
-            <p className="text-xs text-slate-300 mt-0.5">
+            <p className="text-xs text-slate-300 mt-0.5 print:text-[10px] print:text-slate-600">
               Comprehensive distribution of teaching hours and night shifts for all {allInstructors.length} team members across this 7-day period.
             </p>
           </div>
-          <span className="text-xs font-bold text-slate-300 bg-slate-700 px-2.5 py-1 rounded-full">
+          <span className="text-xs font-bold text-slate-300 bg-slate-700 px-2.5 py-1 rounded-full print:bg-slate-200 print:text-slate-800 print:text-[9px] print:px-2 print:py-0.5">
             {allInstructors.length} Instructors Monitored
           </span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-800/80 text-slate-300 font-bold border-b border-slate-800 uppercase text-[10px] tracking-wider">
+          <table className="w-full text-left text-xs text-slate-300 print:text-[9px] print:text-slate-800">
+            <thead className="bg-slate-800/80 text-slate-300 font-bold border-b border-slate-800 uppercase text-[10px] tracking-wider print:bg-slate-100 print:text-slate-800 print:border-slate-300 print:text-[8px]">
               <tr>
-                <th className="px-4 py-3">Instructor</th>
-                <th className="px-3 py-3 text-center">Morning (09-12)</th>
-                <th className="px-3 py-3 text-center">Afternoon (13-16)</th>
-                <th className="px-3 py-3 text-center">Sunday CCS</th>
-                <th className="px-3 py-3 text-center">Total Sessions</th>
-                <th className="px-3 py-3 text-center">Est. Teaching Hrs</th>
-                <th className="px-4 py-3 text-center">Night Shifts</th>
-                <th className="px-4 py-3 text-center">Leave Status</th>
-                <th className="px-4 py-3 text-center">Workload Balance</th>
+                <th className="px-4 py-3 print:px-2 print:py-1.5">Instructor</th>
+                <th className="px-3 py-3 text-center print:px-1.5 print:py-1.5">Morning (09-12)</th>
+                <th className="px-3 py-3 text-center print:px-1.5 print:py-1.5">Afternoon (13-16)</th>
+                <th className="px-3 py-3 text-center print:px-1.5 print:py-1.5">Sunday CCS</th>
+                <th className="px-3 py-3 text-center print:px-1.5 print:py-1.5">Total Sessions</th>
+                <th className="px-3 py-3 text-center print:px-1.5 print:py-1.5">Est. Teaching Hrs</th>
+                <th className="px-4 py-3 text-center print:px-2 print:py-1.5">Night Shifts</th>
+                <th className="px-4 py-3 text-center print:px-2 print:py-1.5">Leave Status</th>
+                <th className="px-4 py-3 text-center print:px-2 print:py-1.5">Workload Balance</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-slate-800 print:divide-slate-200">
               {instructorStats.map((item) => {
                 const isSelected = selectedInstructorId === item.instructor.id;
                 const totalHours = item.totalHours;
 
                 let balanceBadge = (
-                  <span className="bg-emerald-500/15 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  <span className="bg-emerald-500/15 text-emerald-400 print:bg-emerald-100 print:text-emerald-900 text-[10px] print:text-[8px] font-bold px-2 py-0.5 rounded-full">
                     Balanced
                   </span>
                 );
                 if (item.onLeaveDates.length >= 3) {
                   balanceBadge = (
-                    <span className="bg-rose-500/15 text-rose-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <span className="bg-rose-500/15 text-rose-400 print:bg-rose-100 print:text-rose-900 text-[10px] print:text-[8px] font-bold px-2 py-0.5 rounded-full">
                       On Leave
                     </span>
                   );
                 } else if (item.totalSessions >= 5) {
                   balanceBadge = (
-                    <span className="bg-purple-500/15 text-purple-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <span className="bg-purple-500/15 text-purple-400 print:bg-purple-100 print:text-purple-900 text-[10px] print:text-[8px] font-bold px-2 py-0.5 rounded-full">
                       Heavy Load
                     </span>
                   );
                 } else if (item.totalSessions === 0 && item.onLeaveDates.length === 0) {
                   balanceBadge = (
-                    <span className="bg-amber-500/15 text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <span className="bg-amber-500/15 text-amber-400 print:bg-amber-100 print:text-amber-900 text-[10px] print:text-[8px] font-bold px-2 py-0.5 rounded-full">
                       Standby / Free
                     </span>
                   );
@@ -828,69 +846,69 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                 return (
                   <tr
                     key={item.instructor.id}
-                    className={`hover:bg-slate-800/80 transition-colors ${
-                      isSelected ? 'bg-blue-500/10 font-semibold' : ''
+                    className={`hover:bg-slate-800/80 transition-colors print:hover:bg-transparent ${
+                      isSelected ? 'bg-blue-500/10 font-semibold print:bg-blue-50' : ''
                     }`}
                   >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center space-x-2.5">
-                        <div className="w-7 h-7 rounded-full bg-slate-700 text-slate-200 font-black flex items-center justify-center text-[10px]">
+                    <td className="px-4 py-3 print:px-2 print:py-1">
+                      <div className="flex items-center space-x-2.5 print:space-x-1.5">
+                        <div className="w-7 h-7 print:w-5 print:h-5 rounded-full bg-slate-700 print:bg-slate-200 text-slate-200 print:text-slate-800 font-black flex items-center justify-center text-[10px] print:text-[8px]">
                           {item.instructor.fullName.substring(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <div className="font-bold text-slate-100">{item.instructor.fullName}</div>
+                          <div className="font-bold text-slate-100 print:text-slate-900 print:text-[10px]">{item.instructor.fullName}</div>
                           {item.instructor.phone ? (
                             <a
                               href={`tel:${item.instructor.phone.replace(/\s+/g, '')}`}
-                              className="inline-flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-400 font-semibold hover:underline"
+                              className="inline-flex items-center gap-1 text-[10px] print:text-[8.5px] text-emerald-400 print:text-emerald-800 hover:text-emerald-400 font-semibold hover:underline"
                               title={`Call ${item.instructor.fullName}`}
                             >
-                              <Phone className="w-2.5 h-2.5 text-emerald-600" />
+                              <Phone className="w-2.5 h-2.5 text-emerald-600 print:hidden" />
                               <span>{item.instructor.phone}</span>
                             </a>
                           ) : (
-                            <div className="text-[10px] text-slate-400">@{item.instructor.username}</div>
+                            <div className="text-[10px] print:text-[8.5px] text-slate-400 print:text-slate-500">@{item.instructor.username}</div>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-center font-medium">{item.morningCount}</td>
-                    <td className="px-3 py-3 text-center font-medium">{item.afternoonCount}</td>
-                    <td className="px-3 py-3 text-center font-medium">
+                    <td className="px-3 py-3 print:px-1.5 print:py-1 text-center font-medium print:text-slate-800">{item.morningCount}</td>
+                    <td className="px-3 py-3 print:px-1.5 print:py-1 text-center font-medium print:text-slate-800">{item.afternoonCount}</td>
+                    <td className="px-3 py-3 print:px-1.5 print:py-1 text-center font-medium">
                       {item.sundayCount > 0 ? (
-                        <span className="text-purple-400 font-bold">{item.sundayCount}</span>
+                        <span className="text-purple-400 print:text-purple-800 font-bold">{item.sundayCount}</span>
                       ) : (
-                        '-'
+                        <span className="print:text-slate-400">-</span>
                       )}
                     </td>
-                    <td className="px-3 py-3 text-center">
-                      <span className="font-black text-slate-100 text-sm">{item.totalSessions}</span>
+                    <td className="px-3 py-3 print:px-1.5 print:py-1 text-center">
+                      <span className="font-black text-slate-100 print:text-slate-900 text-sm print:text-xs">{item.totalSessions}</span>
                     </td>
-                    <td className="px-3 py-3 text-center font-semibold text-slate-200">
+                    <td className="px-3 py-3 print:px-1.5 print:py-1 text-center font-semibold text-slate-200 print:text-slate-800">
                       {totalHours} hrs
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 print:px-2 print:py-1 text-center">
                       {item.nightShiftsCount > 0 ? (
-                        <span className="inline-flex items-center gap-1 bg-indigo-500/15 text-indigo-400 font-bold px-2 py-0.5 rounded text-[11px]">
-                          <Moon className="w-3 h-3 text-amber-500" />
+                        <span className="inline-flex items-center gap-1 bg-indigo-500/15 print:bg-indigo-100 text-indigo-400 print:text-indigo-900 font-bold px-2 py-0.5 rounded text-[11px] print:text-[8px]">
+                          <Moon className="w-3 h-3 text-amber-500 print:text-indigo-700" />
                           <span>{item.nightShiftsCount} Night{item.nightShiftsCount > 1 ? 's' : ''}</span>
                         </span>
                       ) : (
-                        <span className="text-slate-400 text-[11px]">None</span>
+                        <span className="text-slate-400 print:text-slate-500 text-[11px] print:text-[8px]">None</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 print:px-2 print:py-1 text-center">
                       {item.onLeaveDates.length > 0 ? (
-                        <span className="bg-rose-500/15 text-rose-400 font-semibold px-2 py-0.5 rounded text-[10px]">
+                        <span className="bg-rose-500/15 print:bg-rose-100 text-rose-400 print:text-rose-900 font-semibold px-2 py-0.5 rounded text-[10px] print:text-[8px]">
                           {item.onLeaveDates.length} day{item.onLeaveDates.length > 1 ? 's' : ''} away
                         </span>
                       ) : (
-                        <span className="text-emerald-400 font-semibold text-[11px] flex items-center justify-center gap-0.5">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Available
+                        <span className="text-emerald-400 print:text-emerald-800 font-semibold text-[11px] print:text-[8px] flex items-center justify-center gap-0.5">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600 print:text-emerald-700" /> Available
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center">{balanceBadge}</td>
+                    <td className="px-4 py-3 print:px-2 print:py-1 text-center">{balanceBadge}</td>
                   </tr>
                 );
               })}

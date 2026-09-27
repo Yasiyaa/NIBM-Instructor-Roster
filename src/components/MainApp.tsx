@@ -226,7 +226,7 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData, initialCurrentUse
 
   return (
     <DialogProvider>
-      <div className="min-h-screen bg-slate-950 flex flex-col font-sans antialiased text-slate-100">
+      <div className="min-h-screen bg-slate-950 flex flex-col font-sans antialiased text-slate-100 print:bg-white print:text-slate-900 print:min-h-0">
         {/* Header with Role Restraints */}
         <Header
           currentUser={currentUser}
@@ -242,7 +242,7 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData, initialCurrentUse
         />
 
         {/* Main Container: Strictly Renders Authorized Views */}
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full">
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex-1 w-full print:max-w-none print:p-0 print:m-0 print:w-full">
           {/* 1. Instructor Portal: ONLY for Instructors */}
           {isInstructor && activeTab === 'instructor' && (
             <InstructorPortal
@@ -325,7 +325,7 @@ export const MainApp: React.FC<MainAppProps> = ({ initialData, initialCurrentUse
         </main>
 
         {/* Footer */}
-        <footer className="bg-slate-900 border-t border-slate-800 py-4 text-center text-xs text-slate-500">
+        <footer className="bg-slate-900 border-t border-slate-800 py-4 text-center text-xs text-slate-500 print:hidden">
           <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
             <span>
               NIBM Academic & Technical Operations System • SOC / IT Division
