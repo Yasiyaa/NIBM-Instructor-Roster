@@ -24,9 +24,11 @@ import {
   Phone,
   ScrollText,
   Filter,
+  Sparkles,
 } from 'lucide-react';
 import { reviewLeaveAction, getExecutiveReportAction, getAuditLogsAction } from '@/lib/actions';
 import { WeeklyScheduleView } from '@/components/WeeklyScheduleView';
+import { AiCopilotDrawer } from './AiCopilotDrawer';
 
 const AUDIT_ACTION_LABELS: Record<string, string> = {
   DUTY_ASSIGNED: 'Duty Assigned',
@@ -84,6 +86,27 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
   const [slotFilter, setSlotFilter] = useState<string>('ALL');
   const [report, setReport] = useState<ExecutiveStatusReport>(initialReport);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+
+  // AI Co-Pilot Drawer State
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement)?.isContentEditable
+      ) {
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setAiDrawerOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // ---- Governance / Audit Trail Drawer ----
   const [auditDrawerOpen, setAuditDrawerOpen] = useState(false);
@@ -195,6 +218,18 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
+          {rosterWeek && (currentUser.role === 'EXECUTIVE' || currentUser.role === 'ADMIN' || currentUser.role === 'DEMONSTRATOR') && (
+            <button
+              onClick={() => setAiDrawerOpen(true)}
+              className="flex items-center space-x-1.5 text-xs font-bold px-3.5 py-2 rounded-lg shadow-md transition-all bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:via-indigo-500 hover:to-blue-500 text-white cursor-pointer active:scale-95 border border-purple-400/40 shadow-purple-900/30 print:hidden"
+              title="AI Roster Co-Pilot & Radar (Ctrl+K / ⌘K)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+              <span>AI Co-Pilot</span>
+              <span className="hidden sm:inline-block ml-1 text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-mono">⌘K</span>
+            </button>
+          )}
+
           {(currentUser.role === 'EXECUTIVE' || currentUser.role === 'ADMIN') && (
             <button
               onClick={() => setAuditDrawerOpen(true)}
@@ -246,7 +281,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                 type="date"
                 value={selectedDate}
                 onChange={(e) => handleFilterChange(e.target.value, slotFilter)}
-                className="bg-transparent text-white text-sm font-semibold focus:outline-none cursor-pointer"
+                className="bg-transparent text-white text-sm font-semibold focus:outline-none cursor-pointer [color-scheme:dark]"
               />
             </div>
             <button
@@ -254,7 +289,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                 const today = new Date().toISOString().split('T')[0];
                 handleFilterChange(today, slotFilter);
               }}
-              className="text-xs bg-blue-600 hover:bg-blue-500 text-white font-medium px-2.5 py-1.5 rounded-lg transition-colors ml-1"
+              className="text-xs bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1.5 rounded-lg transition-colors ml-1 cursor-pointer shadow-xs active:scale-95"
             >
               Today
             </button>
@@ -273,10 +308,10 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
             <button
               key={pill.id}
               onClick={() => handleFilterChange(selectedDate, pill.id)}
-              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${
+              className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
                 slotFilter === pill.id
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700/80 border border-slate-700/60'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700/80'
               }`}
             >
               {pill.label}
@@ -740,6 +775,20 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* AI Roster Co-Pilot Drawer */}
+      {rosterWeek && (
+        <AiCopilotDrawer
+          isOpen={aiDrawerOpen}
+          onClose={() => setAiDrawerOpen(false)}
+          rosterWeek={rosterWeek}
+          dutyAssignments={dutyAssignments || []}
+          nightShifts={nightShifts || []}
+          leaveRequests={leaveRequests || []}
+          allInstructors={allInstructors}
+          onRefresh={onRefresh}
+        />
       )}
     </div>
   );

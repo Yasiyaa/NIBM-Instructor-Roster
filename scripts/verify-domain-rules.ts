@@ -57,8 +57,13 @@ async function main() {
 
     // 2. Collision Rule: Double Booking Prevention
     const testDate = `2030-05-${Math.floor(Math.random() * 20 + 10)}`; // Unique future test date
-    const week = await getOrCreateRosterWeek('2030-05-06'); // Monday of that test week
+    const week = await getOrCreateRosterWeek(testDate); // Week starting on testDate
     const inst1 = instructors[0];
+
+    // Clean up any surviving test fixtures on this test date
+    await prisma.dutyAssignment.deleteMany({ where: { dutyDate: testDate } });
+    await prisma.nightShift.deleteMany({ where: { shiftDate: testDate } });
+    await prisma.leaveRequest.deleteMany({ where: { startDate: testDate } });
 
     const assign1 = await addDutyAssignment({
       rosterWeekId: week.id,
@@ -215,7 +220,97 @@ async function main() {
       `Executive report presents unified 09:00 - 16:00 timing`
     );
 
-    // 8. Cleanup surviving duty assignments
+    // 8. AI Roster Health Radar Verification
+    const {
+      scanRosterHealth,
+      findEligibleSubstitutes,
+      runDeterministicScheduler,
+      validateProposedChanges,
+    } = await import('../src/lib/ai-scheduler');
+    const { getCatalog } = await import('../src/lib/storage');
+    const catalog = await getCatalog();
+
+    const testNightShift = {
+      id: 'test-night-shift',
+      rosterWeekId: week.id,
+      instructorId: inst3.id,
+      instructorName: inst3.fullName,
+      shiftDate: testDate,
+      notes: 'Caretaker',
+    };
+
+    const healthReport = scanRosterHealth({
+      rosterWeek: week,
+      dutyAssignments: [assign1.assignment!, assign2.assignment!],
+      nightShifts: [testNightShift],
+      leaveRequests: [approvedLeave],
+      allInstructors: instructors,
+    });
+    assert(Array.isArray(healthReport.conflicts), 'AI Health Radar returns conflicts array');
+    assert(Array.isArray(healthReport.workloadImbalances), 'AI Health Radar returns workload imbalances');
+    assert(
+      healthReport.workloadImbalances.length ===
+        instructors.filter((i) => i.role !== 'EXECUTIVE' && i.username !== 'instructors').length,
+      'AI Health Radar tracks all teaching cadre instructors'
+    );
+    assert(typeof healthReport.unassignedSlotsCount === 'number', 'AI Health Radar computes unassigned slots count');
+
+    // 9. AI Smart Substitute Finder Verification
+    // inst2 is on approved leave on testDate. Let's find substitutes for inst2 for Morning slot
+    const subs = findEligibleSubstitutes({
+      dateStr: testDate,
+      startTime: '09:00',
+      absentInstructorId: inst2.id,
+      allInstructors: instructors,
+      dutyAssignments: [assign1.assignment!],
+      nightShifts: [testNightShift],
+      leaveRequests: [approvedLeave],
+    });
+    assert(Array.isArray(subs), 'AI Substitute Finder returns array of suggestions');
+    assert(subs.length > 0, 'AI Substitute Finder finds available standby candidates');
+    assert(!subs.some((s) => s.instructor.id === inst2.id), 'AI Substitute Finder excludes the absent instructor');
+    assert(
+      !subs.some((s) => s.instructor.id === inst1.id),
+      'AI Substitute Finder excludes instructor busy teaching during that slot'
+    );
+    assert(subs.every((s) => s.score > 0), 'All suggested substitutes have positive fitness scores');
+
+    // 10. AI Deterministic CSP Scheduler Verification
+    const proposed = runDeterministicScheduler({
+      rosterWeek: week,
+      dutyAssignments: [],
+      nightShifts: [],
+      leaveRequests: [approvedLeave],
+      allInstructors: instructors,
+      catalog,
+      targetDate: testDate,
+    });
+    assert(
+      Array.isArray(proposed) && proposed.length > 0,
+      `Deterministic CSP generates proposed duty assignments (count: ${proposed.length})`
+    );
+
+    // Invariant: inst2 is on approved leave on testDate; verify inst2 was NEVER assigned
+    const assignedInst2OnLeave = proposed.filter(
+      (p) => p.instructorId === inst2.id && p.dutyDate === testDate
+    );
+    assert(
+      assignedInst2OnLeave.length === 0,
+      'Deterministic CSP strictly respects leave precedence (0 assignments for instructor on leave)'
+    );
+
+    // Invariant: Verify 0 double bookings and 100% invariant compliance
+    const validated = validateProposedChanges({
+      proposed,
+      existingDuties: [],
+      leaveRequests: [approvedLeave],
+    });
+    assert(
+      validated.length === proposed.length,
+      'Deterministic CSP proposed changes 100% pass invariant validation'
+    );
+
+    // 11. Cleanup surviving duty assignments
     if (assign1.assignment) {
       await deleteDutyAssignment(assign1.assignment.id);
     }

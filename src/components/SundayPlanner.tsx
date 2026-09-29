@@ -31,6 +31,7 @@ import {
   LibraryBig,
   Pencil,
   Check,
+  FileText,
 } from 'lucide-react';
 import {
   addDutyAction,
@@ -54,6 +55,7 @@ import {
 } from '@/lib/actions';
 import { getMatchingOppositeSlotDuty, mergeDutyAssignments } from '@/lib/roster-utils';
 import { useDialog } from './DialogProvider';
+import { AiCopilotDrawer } from './AiCopilotDrawer';
 
 interface SundayPlannerProps {
   rosterWeek: RosterWeek;
@@ -101,6 +103,27 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
   // Dynamic Week Starting Date State (User can plan starting from ANY date!)
   const [planningStartDate, setPlanningStartDate] = useState<string>(rosterWeek.startDate);
   const [prevRosterStartDate, setPrevRosterStartDate] = useState<string>(rosterWeek.startDate);
+
+  // AI Co-Pilot Drawer State
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement)?.isContentEditable
+      ) {
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setAiDrawerOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   if (rosterWeek.startDate !== prevRosterStartDate) {
     setPrevRosterStartDate(rosterWeek.startDate);
@@ -701,6 +724,16 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
             </div>
 
             <button
+              onClick={() => setAiDrawerOpen(true)}
+              className="flex items-center space-x-1.5 text-xs font-bold px-4 py-2.5 rounded-lg shadow-md transition-all bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:via-indigo-500 hover:to-blue-500 text-white cursor-pointer active:scale-95 border border-purple-400/40 shadow-purple-900/30"
+              title="AI Roster Co-Pilot (Ctrl+K / ⌘K)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+              <span>AI Co-Pilot</span>
+              <span className="hidden sm:inline-block ml-1 text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-mono">⌘K</span>
+            </button>
+
+            <button
               onClick={() => setCatalogModalOpen(true)}
               className="flex items-center space-x-1.5 text-xs font-bold px-4 py-2.5 rounded-lg shadow-md transition-all bg-slate-700 hover:bg-slate-600 text-white cursor-pointer active:scale-95"
             >
@@ -760,7 +793,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                 type="date"
                 value={planningStartDate}
                 onChange={(e) => handleDateChange(e.target.value)}
-                className="bg-slate-800 text-white text-xs font-bold border border-slate-700 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                className="bg-slate-800 text-white text-xs font-bold border border-slate-700 rounded-lg px-2.5 py-1 focus:outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer [color-scheme:dark]"
               />
               <span className="text-xs text-slate-400 font-normal hidden sm:inline">
                 → {weekDays[6]?.formattedDate} ({weekDays[6]?.dateStr})
@@ -846,7 +879,7 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
           </span>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-2">
           {allInstructors.map((inst) => {
             const data = workloadMap[inst.id] || { sessions: 0, nightShifts: 0 };
             return (
@@ -1013,7 +1046,13 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                                 {assignment.moduleName ?? assignment.dutyType}
                               </div>
                               {assignment.notes && (
-                                <div className="text-[9px] text-slate-500 italic truncate">{assignment.notes}</div>
+                                <div
+                                  className="mt-0.5 inline-flex items-center gap-1 text-[9px] text-slate-300 bg-slate-800/80 px-1 py-0.2 rounded border border-slate-700/60 max-w-full cursor-help"
+                                  title={`Notes: ${assignment.notes}`}
+                                >
+                                  <FileText className="w-2.5 h-2.5 text-emerald-400 shrink-0" />
+                                  <span className="truncate max-w-[120px]">{assignment.notes}</span>
+                                </div>
                               )}
                               {assignment.roomLab && (
                                 <div className="text-[9px] text-slate-500 mt-0.5">
@@ -1117,7 +1156,13 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                                 {assignment.moduleName ?? assignment.dutyType}
                               </div>
                               {assignment.notes && (
-                                <div className="text-[9px] text-slate-500 italic truncate">{assignment.notes}</div>
+                                <div
+                                  className="mt-0.5 inline-flex items-center gap-1 text-[9px] text-slate-300 bg-slate-800/80 px-1 py-0.2 rounded border border-slate-700/60 max-w-full cursor-help"
+                                  title={`Notes: ${assignment.notes}`}
+                                >
+                                  <FileText className="w-2.5 h-2.5 text-blue-400 shrink-0" />
+                                  <span className="truncate max-w-[120px]">{assignment.notes}</span>
+                                </div>
                               )}
                               {assignment.roomLab && (
                                 <div className="text-[9px] text-slate-500 mt-0.5">
@@ -1191,7 +1236,13 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
                               {assignment.moduleName ?? assignment.dutyType}
                             </div>
                             {assignment.notes && (
-                              <div className="text-[9px] text-slate-400 italic truncate">{assignment.notes}</div>
+                              <div
+                                className="mt-0.5 inline-flex items-center gap-1 text-[9px] text-slate-300 bg-slate-800/80 px-1 py-0.2 rounded border border-slate-700/60 max-w-full cursor-help"
+                                title={`Notes: ${assignment.notes}`}
+                              >
+                                <FileText className="w-2.5 h-2.5 text-purple-400 shrink-0" />
+                                <span className="truncate max-w-[120px]">{assignment.notes}</span>
+                              </div>
                             )}
                             {assignment.roomLab && (
                               <div className="text-[9px] text-slate-500 mt-0.5">
@@ -2042,6 +2093,18 @@ export const SundayPlanner: React.FC<SundayPlannerProps> = ({
           </div>
         </div>
       )}
+
+      {/* AI Roster Co-Pilot Drawer */}
+      <AiCopilotDrawer
+        isOpen={aiDrawerOpen}
+        onClose={() => setAiDrawerOpen(false)}
+        rosterWeek={rosterWeek}
+        dutyAssignments={dutyAssignments}
+        nightShifts={nightShifts}
+        leaveRequests={leaveRequests}
+        allInstructors={allInstructors}
+        onRefresh={onRefresh}
+      />
     </div>
   );
 };

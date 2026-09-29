@@ -21,7 +21,223 @@ import {
   Sparkles,
   ExternalLink,
   Phone,
+  X,
+  FileText,
+  Info,
 } from 'lucide-react';
+
+interface SessionCardProps {
+  duty: DutyAssignment;
+  slotType: 'morning' | 'afternoon' | 'sunday';
+  isFullDay: boolean;
+  allInstructors: User[];
+}
+
+const SessionCard: React.FC<SessionCardProps> = ({
+  duty,
+  slotType,
+  isFullDay,
+  allInstructors,
+}) => {
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const instructor = allInstructors.find((i) => i.id === duty.instructorId);
+
+  const colorStyles = {
+    morning: {
+      card: 'bg-blue-500/10 print:bg-blue-50/80 border-blue-500/20 print:border-blue-300',
+      title: 'text-blue-300 print:text-blue-950',
+      batch: 'bg-blue-500/25 print:bg-blue-200 text-blue-400 print:text-blue-900',
+      avatarBg: 'bg-blue-600 print:bg-blue-700',
+      badgeBorder: 'border-blue-100/20 print:border-blue-200',
+      fullDayBadge:
+        'text-blue-300 print:text-indigo-950 bg-blue-500/20 print:bg-indigo-100 border-blue-500/30 print:border-indigo-300',
+    },
+    afternoon: {
+      card: 'bg-amber-500/10 print:bg-amber-50/80 border-amber-500/20 print:border-amber-300',
+      title: 'text-amber-300 print:text-amber-950',
+      batch: 'bg-amber-500/25 print:bg-amber-200 text-amber-400 print:text-amber-900',
+      avatarBg: 'bg-amber-600 print:bg-amber-700',
+      badgeBorder: 'border-amber-100/20 print:border-amber-200',
+      fullDayBadge:
+        'text-amber-300 print:text-amber-950 bg-amber-500/20 print:bg-amber-100 border-amber-500/30 print:border-amber-300',
+    },
+    sunday: {
+      card: 'bg-purple-500/15 print:bg-purple-50/80 border-purple-500/20 print:border-purple-300',
+      title: 'text-purple-300 print:text-purple-950',
+      batch: 'bg-purple-500/25 print:bg-purple-200 text-purple-400 print:text-purple-900',
+      avatarBg: 'bg-purple-700 print:bg-purple-800',
+      badgeBorder: 'border-purple-500/20 print:border-purple-200',
+      fullDayBadge:
+        'text-purple-300 print:text-purple-950 bg-purple-500/20 print:bg-purple-100 border-purple-500/30 print:border-purple-300',
+    },
+  }[slotType];
+
+  return (
+    <div
+      className={`relative rounded-lg print:rounded p-2 print:p-1 border transition-all shadow-2xs hover:shadow-xs print:shadow-none print-avoid-break group ${colorStyles.card}`}
+      onMouseEnter={() => setPopoverOpen(true)}
+      onMouseLeave={() => setPopoverOpen(false)}
+    >
+      {/* Session Title / Module */}
+      <div className={`text-xs print:text-[9.5px] font-bold line-clamp-2 leading-snug ${colorStyles.title}`}>
+        {duty.moduleName ?? duty.dutyType}
+      </div>
+
+      {/* Batch & Room */}
+      <div className="mt-1 print:mt-0.5 flex items-center justify-between text-[11px] print:text-[8.5px]">
+        {duty.batchName && (
+          <span className={`font-bold px-1.5 py-0.2 rounded text-[10px] print:text-[8px] ${colorStyles.batch}`}>
+            {duty.batchName}
+          </span>
+        )}
+        {duty.roomLab && (
+          <span className="text-slate-400 print:text-slate-600 font-medium text-[10px] print:text-[8.5px] flex items-center gap-0.5">
+            <MapPin className="w-2.5 h-2.5 text-slate-400 print:text-slate-600" />
+            {duty.roomLab}
+          </span>
+        )}
+      </div>
+
+      {/* Full Day Indicator */}
+      {isFullDay && (
+        <div
+          className={`mt-1.5 print:mt-0.5 inline-flex items-center gap-1 text-[10px] print:text-[8px] font-bold px-1.5 py-0.5 print:py-0.2 rounded border shadow-2xs ${colorStyles.fullDayBadge}`}
+        >
+          <Clock className="w-2.5 h-2.5 shrink-0" />
+          <span>09:00 - 16:00 (Full Day)</span>
+        </div>
+      )}
+
+      {/* Interactive Compact Note Pill on Screen */}
+      {duty.notes && (
+        <div className="mt-1 print:hidden">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setPopoverOpen((prev) => !prev);
+            }}
+            className="inline-flex items-center gap-1 text-[9.5px] text-slate-300 hover:text-white bg-slate-800/90 hover:bg-slate-700/90 px-1.5 py-0.5 rounded border border-slate-700/80 transition-colors cursor-pointer max-w-full"
+            title="Click to view full session notes"
+          >
+            <FileText className="w-2.5 h-2.5 text-blue-400 shrink-0" />
+            <span className="truncate max-w-[130px]">{duty.notes}</span>
+          </button>
+        </div>
+      )}
+
+      {/* Printed Notes (Preserved on Paper) */}
+      {duty.notes && (
+        <div className="hidden print:block mt-0.5 text-[8px] text-slate-600 italic line-clamp-2">
+          {duty.notes}
+        </div>
+      )}
+
+      {/* Instructor Footer */}
+      <div
+        className={`mt-1.5 print:mt-0.5 pt-1 border-t flex items-center justify-between text-[11px] print:text-[8.5px] font-semibold text-slate-200 print:text-slate-800 ${colorStyles.badgeBorder}`}
+      >
+        <div className="flex items-center space-x-1 min-w-0">
+          <div
+            className={`w-4 h-4 print:w-3.5 print:h-3.5 rounded-full text-white font-bold flex items-center justify-center text-[9px] print:text-[7.5px] shrink-0 ${colorStyles.avatarBg}`}
+          >
+            {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
+          </div>
+          <span className="truncate">{duty.instructorName}</span>
+        </div>
+
+        {/* Info button on mobile for quick tap popover */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setPopoverOpen((prev) => !prev);
+          }}
+          className="lg:hidden text-slate-400 hover:text-slate-200 p-0.5 rounded cursor-pointer"
+          title="Session details"
+        >
+          <Info className="w-3 h-3 text-slate-400" />
+        </button>
+      </div>
+
+      {/* Interactive Floating Popover Card */}
+      {popoverOpen && (
+        <div
+          className={`absolute z-40 left-0 right-0 sm:left-1/2 sm:-translate-x-1/2 ${
+            slotType === 'morning' ? 'top-full mt-2' : 'bottom-full mb-2'
+          } w-72 max-w-[85vw] p-3 rounded-xl bg-slate-950 text-slate-100 border border-slate-700 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 print:hidden`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-start justify-between gap-2 pb-2 border-b border-slate-800">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-blue-400">
+                {isFullDay ? 'Full-Day Session (09:00 - 16:00)' : `${duty.startTime} - ${duty.endTime}`}
+              </div>
+              <div className="text-xs font-bold text-white mt-0.5 leading-snug">
+                {duty.moduleName ?? duty.dutyType}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPopoverOpen(false)}
+              className="text-slate-400 hover:text-white p-1 rounded-md cursor-pointer transition-colors"
+              title="Close details"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="mt-2 space-y-1.5 text-[11px]">
+            {duty.batchName && (
+              <div className="flex items-center justify-between text-slate-300">
+                <span className="text-slate-400">Target Batch:</span>
+                <span className="font-bold text-white bg-slate-800 px-1.5 py-0.2 rounded border border-slate-700">
+                  {duty.batchName}
+                </span>
+              </div>
+            )}
+            {duty.roomLab && (
+              <div className="flex items-center justify-between text-slate-300">
+                <span className="text-slate-400">Room / Facility:</span>
+                <span className="font-bold text-slate-200 flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-blue-400" />
+                  {duty.roomLab}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between text-slate-300 pt-1 border-t border-slate-800/80">
+              <span className="text-slate-400">Assigned Instructor:</span>
+              <span className="font-bold text-white">{duty.instructorName}</span>
+            </div>
+            {instructor?.phone && (
+              <div className="flex items-center justify-between text-slate-300">
+                <span className="text-slate-400">Contact:</span>
+                <a
+                  href={`tel:${instructor.phone.replace(/\s+/g, '')}`}
+                  className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-bold hover:underline"
+                >
+                  <Phone className="w-2.5 h-2.5" />
+                  <span>{instructor.phone}</span>
+                </a>
+              </div>
+            )}
+            {duty.notes && (
+              <div className="mt-2 pt-2 border-t border-slate-800">
+                <div className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1 mb-1">
+                  <FileText className="w-3 h-3 text-blue-400" />
+                  <span>Session Notes & Instructions</span>
+                </div>
+                <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 text-[11px] text-slate-200 whitespace-pre-wrap leading-relaxed">
+                  {duty.notes}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface WeeklyScheduleViewProps {
   rosterWeek: RosterWeek;
@@ -46,6 +262,12 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
   const [prevRosterStartDate, setPrevRosterStartDate] = useState<string>(rosterWeek.startDate);
   const [selectedInstructorId, setSelectedInstructorId] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [mobileSelectedDay, setMobileSelectedDay] = useState<string>('ALL');
+
+  const selectedInstructor = useMemo(() => {
+    if (selectedInstructorId === 'ALL') return null;
+    return allInstructors.find((i) => i.id === selectedInstructorId) || null;
+  }, [selectedInstructorId, allInstructors]);
 
   if (rosterWeek.startDate !== prevRosterStartDate) {
     setPrevRosterStartDate(rosterWeek.startDate);
@@ -230,35 +452,37 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
 
   return (
     <div className="space-y-6 print:space-y-3">
-      {/* Top Banner & Week Controller */}
-      <div className="bg-slate-900 rounded-2xl p-6 text-white border border-slate-800 print:hidden">
+      {/* Top Banner: Week Horizon Controller */}
+      <div className="bg-slate-900 rounded-2xl p-5 sm:p-6 text-white border border-slate-800 shadow-sm print:hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center space-x-2 text-blue-400 text-sm font-medium mb-1">
+            <div className="flex items-center space-x-2 text-blue-400 text-xs sm:text-sm font-semibold mb-1">
               <Shield className="w-4 h-4" />
               <span>Executive Weekly Overview</span>
             </div>
-            <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
               <span>Full-Week Master Schedule</span>
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30">
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30">
                 7-Day Matrix
               </span>
             </h2>
           </div>
 
           {/* Roster Publication Status & Actions */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700 flex items-center space-x-2.5">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+            <div className="bg-slate-800/90 px-3 py-2 rounded-xl border border-slate-700/80 flex items-center space-x-2.5">
               <span
                 className={`w-2.5 h-2.5 rounded-full ${
-                  rosterWeek.status === 'PUBLISHED' ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'bg-amber-400 animate-pulse'
+                  rosterWeek.status === 'PUBLISHED'
+                    ? 'bg-emerald-400 shadow-xs shadow-emerald-400/50'
+                    : 'bg-amber-400 animate-pulse'
                 }`}
               ></span>
               <div className="text-left">
-                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                <div className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">
                   Roster State
                 </div>
-                <div className="text-xs font-black text-white">
+                <div className="text-xs font-black">
                   {rosterWeek.status === 'PUBLISHED' ? (
                     <span className="text-emerald-400">PUBLISHED</span>
                   ) : (
@@ -270,8 +494,8 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
 
             <button
               onClick={handlePrint}
-              className="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-3.5 py-2.5 rounded-xl border border-slate-700 text-xs font-semibold transition-all cursor-pointer shadow-sm"
-              title="Print Weekly Timetable"
+              className="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-3.5 py-2.5 rounded-xl border border-slate-700 text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
+              title="Print Weekly Timetable in Landscape Format"
             >
               <Printer className="w-4 h-4 text-blue-400" />
               <span>Print Timetable</span>
@@ -279,93 +503,192 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
           </div>
         </div>
 
-        {/* Dynamic Week Navigation Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mt-6 pt-4 border-t border-slate-800/80">
-          <div className="flex flex-wrap items-center gap-2">
+        {/* Unified Horizon & Navigation Segmented Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-5 pt-4 border-t border-slate-800/80">
+          <div className="inline-flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700/70 overflow-x-auto max-w-full">
             <button
               onClick={() => handleShiftDate(-7)}
-              className="flex items-center space-x-1 text-xs bg-slate-800/90 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors cursor-pointer"
+              className="flex items-center space-x-1 text-xs text-slate-300 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-slate-700/70 transition-colors cursor-pointer whitespace-nowrap"
+              title="Shift backward 7 days"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
-              <span>Prev 7 Days</span>
+              <span className="hidden sm:inline">Prev 7 Days</span>
+              <span className="sm:hidden">Prev</span>
             </button>
             <button
               onClick={() => handleDateChange(todayStr)}
-              className="text-xs bg-slate-800/90 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors cursor-pointer"
+              className="text-xs text-slate-300 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-slate-700/70 transition-colors cursor-pointer whitespace-nowrap font-medium"
+              title="Jump to current week"
             >
               Current Week
             </button>
             <button
               onClick={handleJumpToSunday}
-              className="text-xs bg-indigo-600/60 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-lg border border-indigo-500/50 transition-colors cursor-pointer"
+              className="text-xs text-indigo-300 bg-indigo-950/60 hover:bg-indigo-900/80 border border-indigo-700/50 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap font-bold"
+              title="Align window starting on Sunday"
             >
               Start on Sunday
             </button>
             <button
               onClick={() => handleShiftDate(7)}
-              className="flex items-center space-x-1 text-xs bg-slate-800/90 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors cursor-pointer"
+              className="flex items-center space-x-1 text-xs text-slate-300 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-slate-700/70 transition-colors cursor-pointer whitespace-nowrap"
+              title="Shift forward 7 days"
             >
-              <span>Next 7 Days</span>
+              <span className="hidden sm:inline">Next 7 Days</span>
+              <span className="sm:hidden">Next</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-700">
-            <Calendar className="w-4 h-4 text-blue-400" />
-            <span className="text-xs text-slate-400 font-medium">Week Starting:</span>
+          {/* Date Picker Range Display */}
+          <div className="flex items-center gap-2 bg-slate-800/90 px-3 py-1.5 rounded-xl border border-slate-700/80">
+            <Calendar className="w-4 h-4 text-blue-400 shrink-0" />
+            <span className="text-xs text-slate-400 font-medium whitespace-nowrap">Week Starting:</span>
             <input
               type="date"
               value={planningStartDate}
               onChange={(e) => handleDateChange(e.target.value)}
-              className="bg-transparent text-white text-xs font-bold focus:outline-none cursor-pointer"
+              className="bg-transparent text-white text-xs font-bold focus:outline-none cursor-pointer [color-scheme:dark]"
             />
-            <span className="text-xs text-slate-400 font-normal">
+            <span className="text-xs text-slate-400 font-normal whitespace-nowrap hidden sm:inline">
               → {weekEndDate}
             </span>
           </div>
         </div>
+      </div>
 
-        {/* Filter & Search Bar */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 mt-4 pt-4 border-t border-slate-800/60">
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Filter className="w-3.5 h-3.5 text-blue-400" />
-            <span className="text-xs text-slate-400 font-medium">Filter Cadre:</span>
-            <select
-              value={selectedInstructorId}
-              onChange={(e) => setSelectedInstructorId(e.target.value)}
-              className="bg-slate-800/90 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer"
-            >
-              <option value="ALL">All 8 Instructors (Full Cadre)</option>
-              {allInstructors.map((inst) => (
-                <option key={inst.id} value={inst.id}>
-                  {inst.fullName}
+      {/* Dedicated Filter & Search Control Center */}
+      <div className="bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 border border-slate-800 shadow-sm print:hidden space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Left: Instructor Cadre Dropdown */}
+          <div className="flex items-center gap-2 min-w-0 sm:w-auto">
+            <div className="flex items-center gap-1.5 bg-slate-800/90 px-3 py-1.5 rounded-xl border border-slate-700/80 w-full sm:w-auto">
+              <Filter className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+              <span className="text-xs text-slate-400 font-medium whitespace-nowrap">Cadre:</span>
+              <select
+                value={selectedInstructorId}
+                onChange={(e) => setSelectedInstructorId(e.target.value)}
+                className="bg-transparent text-slate-200 text-xs font-semibold focus:outline-none cursor-pointer w-full sm:w-auto pr-2"
+              >
+                <option value="ALL" className="bg-slate-900 text-slate-200">
+                  All {allInstructors.length} Instructors (Full Cadre)
                 </option>
-              ))}
-            </select>
+                {allInstructors.map((inst) => (
+                  <option key={inst.id} value={inst.id} className="bg-slate-900 text-slate-200">
+                    {inst.fullName}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div className="relative flex-1 w-full sm:w-auto">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+          {/* Right: Search Box with Clear Button */}
+          <div className="relative flex-1 sm:max-w-md">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search module, batch (e.g. DSE 24.1), or lab..."
+              placeholder="Search module, batch (e.g. DSE 24.1), room, or instructor..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-800/80 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
+              className="w-full bg-slate-800/90 border border-slate-700/80 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 rounded transition-colors cursor-pointer"
+                title="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
+        </div>
 
-          {(selectedInstructorId !== 'ALL' || searchQuery) && (
+        {/* Active Filter Chips & Match Count */}
+        {(selectedInstructorId !== 'ALL' || searchQuery.trim() !== '') && (
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/60">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] text-slate-400 font-medium">Active filters:</span>
+              {selectedInstructorId !== 'ALL' && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 px-2.5 py-0.5 rounded-full">
+                  <span>Instructor: {selectedInstructor?.fullName}</span>
+                  <button
+                    onClick={() => setSelectedInstructorId('ALL')}
+                    className="hover:text-white transition-colors cursor-pointer"
+                    title="Remove instructor filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {searchQuery.trim() !== '' && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-slate-800 text-slate-200 border border-slate-700 px-2.5 py-0.5 rounded-full">
+                  <span>Query: &quot;{searchQuery}&quot;</span>
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="hover:text-white transition-colors cursor-pointer"
+                    title="Clear search filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  setSelectedInstructorId('ALL');
+                  setSearchQuery('');
+                }}
+                className="text-[11px] text-rose-400 hover:text-rose-300 hover:underline font-semibold ml-1 cursor-pointer"
+              >
+                Reset All Filters
+              </button>
+            </div>
+
+            <div className="text-[11px] text-slate-400 font-medium">
+              Showing <span className="font-bold text-slate-200">{filteredAssignments.length}</span> lectures
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Horizontal Day Switcher (Visible only on < lg screens) */}
+        <div className="block lg:hidden pt-2 border-t border-slate-800/60">
+          <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1.5">
+            Focus Day (Mobile Quick Jump):
+          </div>
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
             <button
-              onClick={() => {
-                setSelectedInstructorId('ALL');
-                setSearchQuery('');
-              }}
-              className="text-xs text-blue-400 hover:text-blue-300 underline font-medium cursor-pointer"
+              onClick={() => setMobileSelectedDay('ALL')}
+              className={`text-xs px-2.5 py-1 rounded-lg font-bold whitespace-nowrap transition-all cursor-pointer ${
+                mobileSelectedDay === 'ALL'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60'
+              }`}
             >
-              Reset Filters
+              All 7 Days
             </button>
-          )}
+            {weekDays.map((day) => {
+              const isSelected = mobileSelectedDay === day.dateStr;
+              return (
+                <button
+                  key={day.dateStr}
+                  onClick={() => setMobileSelectedDay(day.dateStr)}
+                  className={`text-xs px-2.5 py-1 rounded-lg font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : day.isToday
+                      ? 'bg-blue-950/80 text-blue-300 border border-blue-700/70'
+                      : day.isSunday
+                      ? 'bg-purple-950/60 text-purple-300 border border-purple-800/60'
+                      : 'bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60'
+                  }`}
+                >
+                  {day.dayName} {day.formattedDate.split(' ')[1]}
+                  {day.isToday && ' • Today'}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
@@ -498,7 +821,11 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
             return (
               <div
                 key={day.dateStr}
-                className={`bg-slate-900 print:bg-white flex flex-col min-h-[520px] print:min-h-0 print-avoid-break ${
+                className={`${
+                  mobileSelectedDay !== 'ALL' && mobileSelectedDay !== day.dateStr
+                    ? 'hidden lg:flex'
+                    : 'flex'
+                } bg-slate-900 print:!flex print:bg-white flex-col min-h-[520px] print:min-h-0 print-avoid-break ${
                   day.isToday ? 'ring-2 ring-blue-500 z-10 print:ring-0' : ''
                 }`}
               >
@@ -564,42 +891,13 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                         morningDuties.map((duty) => {
                           const isFullDay = afternoonDuties.some((a) => isSameSession(duty, a));
                           return (
-                            <div
+                            <SessionCard
                               key={duty.id}
-                              className="bg-blue-500/10 print:bg-blue-50/80 border border-blue-500/20 print:border-blue-300 rounded-lg print:rounded p-2 print:p-1 shadow-2xs hover:shadow-xs transition-shadow print:shadow-none print-avoid-break"
-                            >
-                              <div className="text-xs print:text-[9.5px] font-bold text-blue-300 print:text-blue-950 line-clamp-2 leading-snug">
-                                {duty.moduleName ?? duty.dutyType}
-                              </div>
-                              <div className="mt-1 print:mt-0.5 flex items-center justify-between text-[11px] print:text-[8.5px]">
-                                {duty.batchName && (
-                                  <span className="bg-blue-500/25 print:bg-blue-200 text-blue-400 print:text-blue-900 font-bold px-1.5 py-0.2 rounded text-[10px] print:text-[8px]">
-                                    {duty.batchName}
-                                  </span>
-                                )}
-                                {duty.roomLab && (
-                                  <span className="text-slate-400 print:text-slate-600 font-medium text-[10px] print:text-[8.5px] flex items-center gap-0.5">
-                                    <MapPin className="w-2.5 h-2.5 text-slate-400 print:text-slate-600" />
-                                    {duty.roomLab}
-                                  </span>
-                                )}
-                              </div>
-                              {duty.notes && (
-                                <div className="mt-1 print:mt-0.5 text-[10px] print:text-[8px] text-slate-400 print:text-slate-600 italic line-clamp-2">{duty.notes}</div>
-                              )}
-                              {isFullDay && (
-                                <div className="mt-1.5 print:mt-0.5 inline-flex items-center gap-1 text-[10px] print:text-[8px] font-bold text-blue-300 print:text-indigo-950 bg-blue-500/20 print:bg-indigo-100 border border-blue-500/30 print:border-indigo-300 px-1.5 py-0.5 print:py-0.2 rounded shadow-2xs">
-                                  <Clock className="w-2.5 h-2.5 text-blue-400 print:text-indigo-700 shrink-0" />
-                                  <span>09:00 - 16:00 (Full Day)</span>
-                                </div>
-                              )}
-                              <div className="mt-1.5 print:mt-0.5 pt-1 border-t border-blue-100/20 print:border-blue-200 flex items-center space-x-1 text-[11px] print:text-[8.5px] font-semibold text-slate-200 print:text-slate-800">
-                                <div className="w-4 h-4 print:w-3.5 print:h-3.5 rounded-full bg-blue-600 print:bg-blue-700 text-white font-bold flex items-center justify-center text-[9px] print:text-[7.5px] shrink-0">
-                                  {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
-                                </div>
-                                <span className="truncate">{duty.instructorName}</span>
-                              </div>
-                            </div>
+                              duty={duty}
+                              slotType="morning"
+                              isFullDay={isFullDay}
+                              allInstructors={allInstructors}
+                            />
                           );
                         })
                       )}
@@ -627,42 +925,13 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                         afternoonDuties.map((duty) => {
                           const isFullDay = morningDuties.some((m) => isSameSession(duty, m));
                           return (
-                            <div
+                            <SessionCard
                               key={duty.id}
-                              className="bg-amber-500/10 print:bg-amber-50/80 border border-amber-500/20 print:border-amber-300 rounded-lg print:rounded p-2 print:p-1 shadow-2xs hover:shadow-xs transition-shadow print:shadow-none print-avoid-break"
-                            >
-                              <div className="text-xs print:text-[9.5px] font-bold text-amber-300 print:text-amber-950 line-clamp-2 leading-snug">
-                                {duty.moduleName ?? duty.dutyType}
-                              </div>
-                              <div className="mt-1 print:mt-0.5 flex items-center justify-between text-[11px] print:text-[8.5px]">
-                                {duty.batchName && (
-                                  <span className="bg-amber-500/25 print:bg-amber-200 text-amber-400 print:text-amber-900 font-bold px-1.5 py-0.2 rounded text-[10px] print:text-[8px]">
-                                    {duty.batchName}
-                                  </span>
-                                )}
-                                {duty.roomLab && (
-                                  <span className="text-slate-400 print:text-slate-600 font-medium text-[10px] print:text-[8.5px] flex items-center gap-0.5">
-                                    <MapPin className="w-2.5 h-2.5 text-slate-400 print:text-slate-600" />
-                                    {duty.roomLab}
-                                  </span>
-                                )}
-                              </div>
-                              {duty.notes && (
-                                <div className="mt-1 print:mt-0.5 text-[10px] print:text-[8px] text-slate-400 print:text-slate-600 italic line-clamp-2">{duty.notes}</div>
-                              )}
-                              {isFullDay && (
-                                <div className="mt-1.5 print:mt-0.5 inline-flex items-center gap-1 text-[10px] print:text-[8px] font-bold text-amber-300 print:text-amber-950 bg-amber-500/20 print:bg-amber-100 border border-amber-500/30 print:border-amber-300 px-1.5 py-0.5 print:py-0.2 rounded shadow-2xs">
-                                  <Clock className="w-2.5 h-2.5 text-amber-400 print:text-amber-700 shrink-0" />
-                                  <span>09:00 - 16:00 (Full Day)</span>
-                                </div>
-                              )}
-                              <div className="mt-1.5 print:mt-1 pt-1 border-t border-amber-100/20 print:border-amber-200 flex items-center space-x-1 text-[11px] print:text-[8.5px] font-semibold text-slate-200 print:text-slate-800">
-                                <div className="w-4 h-4 print:w-3.5 print:h-3.5 rounded-full bg-amber-600 print:bg-amber-700 text-white font-bold flex items-center justify-center text-[9px] print:text-[7.5px] shrink-0">
-                                  {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
-                                </div>
-                                <span className="truncate">{duty.instructorName}</span>
-                              </div>
-                            </div>
+                              duty={duty}
+                              slotType="afternoon"
+                              isFullDay={isFullDay}
+                              allInstructors={allInstructors}
+                            />
                           );
                         })
                       )}
@@ -684,35 +953,13 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                           </div>
                         ) : (
                           sundayDuties.map((duty) => (
-                            <div
+                            <SessionCard
                               key={duty.id}
-                              className="bg-purple-500/15 print:bg-purple-50/80 border border-purple-500/20 print:border-purple-300 rounded-lg print:rounded p-2 print:p-1 shadow-2xs print:shadow-none print-avoid-break"
-                            >
-                              <div className="text-xs print:text-[9.5px] font-bold text-purple-300 print:text-purple-950 leading-snug">
-                                {duty.moduleName ?? duty.dutyType}
-                              </div>
-                              <div className="mt-1 print:mt-0.5 flex items-center justify-between text-[11px] print:text-[8.5px]">
-                                {duty.batchName && (
-                                  <span className="bg-purple-500/25 print:bg-purple-200 text-purple-400 print:text-purple-900 font-black px-1.5 py-0.2 rounded text-[10px] print:text-[8px]">
-                                    {duty.batchName}
-                                  </span>
-                                )}
-                                {duty.roomLab && (
-                                  <span className="text-slate-400 print:text-slate-600 font-medium text-[10px] print:text-[8.5px]">
-                                    {duty.roomLab}
-                                  </span>
-                                )}
-                              </div>
-                              {duty.notes && (
-                                <div className="mt-1 print:mt-0.5 text-[10px] print:text-[8px] text-slate-400 print:text-slate-600 italic line-clamp-2">{duty.notes}</div>
-                              )}
-                              <div className="mt-1.5 print:mt-1 pt-1 border-t border-purple-500/20 print:border-purple-200 flex items-center space-x-1 text-[11px] print:text-[8.5px] font-semibold text-purple-300 print:text-purple-900">
-                                <div className="w-4 h-4 print:w-3.5 print:h-3.5 rounded-full bg-purple-700 print:bg-purple-800 text-white font-bold flex items-center justify-center text-[9px] print:text-[7.5px] shrink-0">
-                                  {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
-                                </div>
-                                <span className="truncate">{duty.instructorName}</span>
-                              </div>
-                            </div>
+                              duty={duty}
+                              slotType="sunday"
+                              isFullDay={false}
+                              allInstructors={allInstructors}
+                            />
                           ))
                         )}
                       </div>
