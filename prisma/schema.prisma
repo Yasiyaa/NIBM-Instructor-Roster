@@ -127,6 +127,7 @@ model LeaveRequest {
   endDate       String
   reason        String
   status        LeaveStatus @default(PENDING)
+  appliedAt     DateTime    @default(now())
   reviewedById  String?
   reviewedBy    User?       @relation("ReviewerLeaves", fields: [reviewedById], references: [id])
   reviewedAt    DateTime?
@@ -140,6 +141,7 @@ model LeaveRequest {
   @@index([instructorId, status, startDate, endDate])
   @@index([status, startDate, endDate])
   @@index([reviewedById])
+  @@index([appliedAt])
 }
 
 model AuditLog {

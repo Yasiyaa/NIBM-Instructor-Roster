@@ -757,6 +757,7 @@ function mapLeave(l: Prisma.LeaveRequestGetPayload<{ include: { instructor: true
     endDate: l.endDate,
     reason: l.reason,
     status: l.status,
+    appliedAt: (l.appliedAt ?? l.createdAt).toISOString(),
     reviewedById: l.reviewedById ?? undefined,
     reviewedByName: l.reviewedBy?.fullName ?? undefined,
     reviewedAt: l.reviewedAt?.toISOString(),
@@ -768,7 +769,7 @@ function mapLeave(l: Prisma.LeaveRequestGetPayload<{ include: { instructor: true
 export async function getAllLeaveRequests(): Promise<LeaveRequest[]> {
   const leaves = await prisma.leaveRequest.findMany({
     include: { instructor: true, reviewedBy: true },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { appliedAt: 'desc' },
   });
   return leaves.map(mapLeave);
 }
@@ -777,18 +778,27 @@ export async function createLeaveRequest(
   instructorId: string,
   startDate: string,
   endDate: string,
-  reason: string
+  reason: string,
+  appliedAt?: Date
 ): Promise<LeaveRequest> {
   const instructor = await getUserById(instructorId);
+  const now = appliedAt || new Date();
   const created = await prisma.leaveRequest.create({
-    data: { instructorId, startDate, endDate, reason, status: 'PENDING' },
+    data: {
+      instructorId,
+      startDate,
+      endDate,
+      reason,
+      status: 'PENDING',
+      appliedAt: now,
+    },
     include: { instructor: true, reviewedBy: true },
   });
 
   await logAudit('LEAVE_REQUESTED', 'LeaveRequest', {
     userId: instructorId,
     targetId: created.id,
-    metadata: `${instructor?.fullName || ''} requested leave ${startDate} to ${endDate}: ${reason}`,
+    metadata: `${instructor?.fullName || ''} applied for leave on ${now.toISOString()} (${startDate} to ${endDate}): ${reason}`,
   });
   return mapLeave(created);
 }
@@ -885,6 +895,7 @@ function mapLeaveMinimal(l: Prisma.LeaveRequestGetPayload<Record<string, never>>
     endDate: l.endDate,
     reason: l.reason,
     status: l.status,
+    appliedAt: (l.appliedAt ?? l.createdAt).toISOString(),
     reviewedById: l.reviewedById ?? undefined,
     reviewedAt: l.reviewedAt?.toISOString(),
     reviewComment: l.reviewComment ?? undefined,

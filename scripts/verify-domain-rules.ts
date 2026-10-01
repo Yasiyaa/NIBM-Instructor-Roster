@@ -94,9 +94,19 @@ async function main() {
 
     // 3. Leave Precedence Rule: Cannot assign instructor on approved leave
     const inst2 = instructors[1];
+    const beforeApply = Date.now();
     const leaveReq = await createLeaveRequest(inst2.id, testDate, testDate, 'Doctor appointment');
     createdLeaveIds.push(leaveReq.id);
     assert(leaveReq.status === 'PENDING', 'Leave request created in PENDING state');
+    assert(
+      typeof leaveReq.appliedAt === 'string' && !isNaN(new Date(leaveReq.appliedAt).getTime()),
+      `Leave application records valid appliedAt date and time (${leaveReq.appliedAt})`
+    );
+    const appliedTime = new Date(leaveReq.appliedAt).getTime();
+    assert(
+      appliedTime >= beforeApply - 1000 && appliedTime <= Date.now() + 1000,
+      'Leave application timestamp accurately reflects the exact date and time applied'
+    );
 
     // Yasith / Dr. Thisara approves
     const reviewer = instructors.find((i) => i.role === 'DEMONSTRATOR')?.id || inst1.id;
