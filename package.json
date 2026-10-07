@@ -8,6 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "tsx --env-file=.env scripts/verify-domain-rules.ts",
+    "test:mobile": "tsx --env-file=.env scripts/verify-mobile-api.ts",
+    "mobile:start": "npm --prefix mobile run start",
+    "mobile:check": "npm --prefix mobile run check",
     "db:seed": "tsx --env-file=.env scripts/seed.ts",
     "postinstall": "prisma generate"
   },

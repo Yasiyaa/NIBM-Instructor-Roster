@@ -1,3 +1,5 @@
+export {};
+
 // Runs against the dedicated Neon "test" branch (TEST_DATABASE_URL), never
 // the production database, so this suite can never write real leave
 // requests / night shifts / audit entries into live data. Create the branch

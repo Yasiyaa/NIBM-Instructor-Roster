@@ -45,3 +45,13 @@ next-env.d.ts
 data/.test-roster-store-*.json
 .neon
 .claude/*.lock
+
+# mobile
+mobile/node_modules/
+mobile/.expo/
+
+# agent state
+.agent/
+.gitignore.agent-additions
+SUPER_AGENT_SETUP.md
+

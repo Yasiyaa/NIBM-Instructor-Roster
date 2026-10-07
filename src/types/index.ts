@@ -165,3 +165,11 @@ export interface AiSubstituteSuggestion {
   matchReason: string;
 }
 
+export interface PushToken {
+  id: string;
+  userId: string;
+  token: string;
+  device?: string;
+  createdAt: string;
+}
+
