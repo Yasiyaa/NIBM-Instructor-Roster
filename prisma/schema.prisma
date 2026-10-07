@@ -53,6 +53,7 @@ model User {
   approvedLeaves  LeaveRequest[] @relation("ReviewerLeaves")
   publishedWeeks  RosterWeek[]   @relation("PublishedWeeks")
   auditLogs       AuditLog[]
+  pushTokens      PushToken[]
 }
 
 // Dates below (startDate/endDate/dutyDate/shiftDate) are deliberately plain
@@ -86,14 +87,19 @@ model DutyAssignment {
   slotLabel    String
   startTime    String
   endTime      String
-  batchName    String
-  moduleName   String
+  // Free-text presets; only Teaching Duty uses batch/module -- other duty
+  // types (CGU call handling, lab inspection, ...) use `notes` instead.
+  dutyType     String     @default("Teaching Duty")
+  batchName    String?
+  moduleName   String?
   roomLab      String?
   notes        String?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 
   @@unique([dutyDate, startTime, instructorId])
+  @@index([rosterWeekId])
+  @@index([instructorId])
 }
 
 model NightShift {
@@ -110,6 +116,8 @@ model NightShift {
   // Exactly one night-duty officer per date -- setNightShift() replaces
   // whoever previously held that date rather than adding a second row.
   @@unique([shiftDate])
+  @@index([rosterWeekId])
+  @@index([instructorId])
 }
 
 model LeaveRequest {
@@ -120,12 +128,21 @@ model LeaveRequest {
   endDate       String
   reason        String
   status        LeaveStatus @default(PENDING)
+  appliedAt     DateTime    @default(now())
   reviewedById  String?
   reviewedBy    User?       @relation("ReviewerLeaves", fields: [reviewedById], references: [id])
   reviewedAt    DateTime?
   reviewComment String?
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+
+  // Serves the leave-precedence check hit on every duty/night-shift
+  // assignment (instructorId + status + date range) and the executive
+  // dashboard's daily on-leave lookup (status + date range).
+  @@index([instructorId, status, startDate, endDate])
+  @@index([status, startDate, endDate])
+  @@index([reviewedById])
+  @@index([appliedAt])
 }
 
 model AuditLog {
@@ -137,13 +154,34 @@ model AuditLog {
   targetId     String?
   metadata     String?
   createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([userId])
+  @@index([action])
 }
 
 // Singleton row (id is always "singleton") holding the dynamic academic
 // catalog of student batches and lecture rooms/labs.
 model Catalog {
-  id      String   @id @default("singleton")
-  batches String[]
-  rooms   String[]
-  modules String[] @default([])
+  id                 String   @id @default("singleton")
+  batches            String[]
+  rooms              String[]
+  modules            String[] @default([])
+  dutyTypes          String[] @default([])
+  autoRefreshSeconds Int      @default(5)
 }
+
+model PushToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String
+  device    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, token])
+  @@index([userId])
+  @@index([token])
+}
+

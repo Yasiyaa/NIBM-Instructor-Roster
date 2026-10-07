@@ -62,3 +62,17 @@ export async function deleteSession(): Promise<void> {
   const cookieStore = await cookies();
   cookieStore.delete(SESSION_COOKIE);
 }
+
+export async function createAuthToken(userId: string, expiresIn = '30d'): Promise<string> {
+  return new SignJWT({ userId })
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(expiresIn)
+    .sign(getSecretKey());
+}
+
+export async function verifyAuthToken(token: string): Promise<string | null> {
+  const payload = await decrypt(token);
+  return payload?.userId ?? null;
+}
+

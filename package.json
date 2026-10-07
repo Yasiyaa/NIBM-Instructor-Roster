@@ -8,7 +8,11 @@
     "start": "next start",
     "lint": "eslint",
     "test": "tsx --env-file=.env scripts/verify-domain-rules.ts",
-    "db:seed": "tsx --env-file=.env scripts/seed.ts"
+    "test:mobile": "tsx --env-file=.env scripts/verify-mobile-api.ts",
+    "mobile:start": "npm --prefix mobile run start",
+    "mobile:check": "npm --prefix mobile run check",
+    "db:seed": "tsx --env-file=.env scripts/seed.ts",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@neon/config": "^1.7.2",
@@ -37,5 +41,12 @@
     "tailwindcss": "^4",
     "tsx": "^4.23.14",
     "typescript": "^5"
+  },
+  "allowScripts": {
+    "@prisma/client@6.19.3": true,
+    "@prisma/engines@6.19.3": true,
+    "esbuild@0.28.2": true,
+    "prisma@6.19.3": true,
+    "unrs-resolver@1.12.2": true
   }
 }

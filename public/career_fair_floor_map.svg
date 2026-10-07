@@ -1,0 +1,676 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" width="100%" height="100%" style="background:#ffffff; font-family:'Inter',system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <defs>
+    <!-- Gradients -->
+    <linearGradient id="primaryRibbon" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e3a8a" />
+      <stop offset="50%" stop-color="#1d4ed8" />
+      <stop offset="100%" stop-color="#2563eb" />
+    </linearGradient>
+
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+
+    <linearGradient id="liftGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+
+    <linearGradient id="redAccent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#dc2626" />
+      <stop offset="100%" stop-color="#ef4444" />
+    </linearGradient>
+
+    <!-- Filters & Shadows -->
+    <filter id="softShadow" x="-10%" y="-10%" width="120%" height="125%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#0f172a" flood-opacity="0.08" />
+    </filter>
+
+    <filter id="ribbonShadow" x="-10%" y="-10%" width="120%" height="130%" filterUnits="userSpaceOnUse">
+      <feDropShadow dx="0" dy="6" stdDeviation="10" flood-color="#1e3a8a" flood-opacity="0.25" />
+    </filter>
+
+    <filter id="liftGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#0284c7" flood-opacity="0.35" />
+    </filter>
+
+    <!-- Marker Arrow -->
+    <marker id="arrowRed" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1 L 10 5 L 0 9 z" fill="#ef4444" />
+    </marker>
+    <marker id="arrowWhite" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#ffffff" />
+    </marker>
+
+    <!-- Background Grid Pattern -->
+    <pattern id="isoGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#e2e8f0" stroke-width="0.75" />
+      <circle cx="0" cy="0" r="1.5" fill="#cbd5e1" />
+    </pattern>
+  </defs>
+
+  <!-- Background Base with Grid -->
+  <rect width="1600" height="1000" fill="#f8fafc" />
+  <rect width="1600" height="1000" fill="url(#isoGrid)" opacity="0.8" />
+
+  <!-- Diagonal Aesthetic Accent Graphic (matching poster) -->
+  <path d="M -100 200 L 400 -100 L 480 -60 L -20 240 Z" fill="#2563eb" opacity="0.04" />
+  <path d="M 1200 1100 L 1700 700 L 1760 760 L 1260 1160 Z" fill="#dc2626" opacity="0.03" />
+
+  <!-- ==================== HEADER SECTION ==================== -->
+  <g id="header-branding" transform="translate(60, 45)">
+    <!-- Event Sub-title -->
+    <text x="0" y="25" font-size="14" font-weight="700" letter-spacing="3" fill="#64748b">CAREER GUIDANCE UNIT PRESENTS</text>
+    
+    <!-- Main Event Title -->
+    <text x="0" y="65" font-size="34" font-weight="900" letter-spacing="0.5" fill="#0f172a">“MEET YOUR <tspan fill="#dc2626">INDUSTRY”</tspan></text>
+    
+    <!-- Career Fair Logo Lockup -->
+    <g transform="translate(0, 78)">
+      <text x="0" y="32" font-size="28" font-weight="900" fill="#0f172a" letter-spacing="-0.5">career <tspan fill="#1e40af">2026</tspan></text>
+      <!-- Stylized FAIR badge -->
+      <rect x="175" y="10" width="84" height="26" rx="6" fill="#0f172a" />
+      <text x="217" y="28" font-size="17" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="2">FA<tspan fill="#ef4444">I</tspan>R</text>
+    </g>
+
+    <!-- Floor and Date Badge -->
+    <g transform="translate(0, 126)">
+      <rect width="320" height="28" rx="14" fill="#fee2e2" stroke="#fecaca" stroke-width="1" />
+      <circle cx="14" cy="14" r="5" fill="#dc2626" />
+      <text x="28" y="19" font-size="12" font-weight="700" fill="#991b1b">FLOOR 03 EXHIBITION MAP • 23RD SEPT 2026</text>
+    </g>
+  </g>
+
+  <!-- Top Right Logos (NIBM & SOCE) -->
+  <g id="header-logos" transform="translate(1120, 50)">
+    <!-- Background Card -->
+    <rect width="420" height="75" rx="16" fill="#ffffff" filter="url(#softShadow)" stroke="#e2e8f0" stroke-width="1" />
+    
+    <!-- NIBM Branding -->
+    <g transform="translate(25, 22)">
+      <!-- NIBM human figure icon -->
+      <circle cx="12" cy="10" r="4.5" fill="#0284c7" />
+      <path d="M 6 26 C 6 18 18 18 18 26" fill="none" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" />
+      <text x="26" y="22" font-size="20" font-weight="900" fill="#0f172a" letter-spacing="1">NIBM</text>
+      <text x="86" y="17" font-size="9" font-weight="800" fill="#dc2626" letter-spacing="1">THE CITY</text>
+      <text x="86" y="27" font-size="9" font-weight="800" fill="#dc2626" letter-spacing="1">UNIVERSITY</text>
+    </g>
+
+    <!-- Vertical Divider -->
+    <line x1="225" y1="18" x2="225" y2="58" stroke="#cbd5e1" stroke-width="1.5" />
+
+    <!-- SOCE Branding -->
+    <g transform="translate(245, 22)">
+      <!-- SOCE connected nodes icon -->
+      <circle cx="12" cy="16" r="12" fill="#1e3a8a" opacity="0.1" />
+      <circle cx="8" cy="12" r="2.5" fill="#1e3a8a" />
+      <circle cx="18" cy="12" r="2.5" fill="#1e3a8a" />
+      <circle cx="13" cy="21" r="2.5" fill="#1e3a8a" />
+      <line x1="8" y1="12" x2="18" y2="12" stroke="#1e3a8a" stroke-width="1.5" />
+      <line x1="8" y1="12" x2="13" y2="21" stroke="#1e3a8a" stroke-width="1.5" />
+      <line x1="18" y1="12" x2="13" y2="21" stroke="#1e3a8a" stroke-width="1.5" />
+      
+      <text x="30" y="22" font-size="20" font-weight="900" fill="#1e3a8a" letter-spacing="1">SOCE</text>
+      <text x="31" y="32" font-size="7.5" font-weight="600" fill="#64748b" letter-spacing="0.5">SCHOOL OF COMPUTING &amp; ENG</text>
+    </g>
+  </g>
+
+
+  <!-- ==================== MAIN WAYFINDING RIBBONS (THE BLUE PATHWAYS) ==================== -->
+  <g id="navigation-pathways" filter="url(#ribbonShadow)">
+    
+    <!-- Path 1: From Lift to West Wing (Neo Lab & Lithium) -->
+    <!-- Ribbon Track -->
+    <path d="M 520 690 
+             L 360 690 
+             C 310 690 280 660 280 620
+             L 280 575
+             C 280 540 250 515 210 515
+             L 160 515" 
+          fill="none" stroke="url(#primaryRibbon)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+    
+    <!-- Inner Ribbon Stripe for dynamic speed/tech look -->
+    <path d="M 520 690 
+             L 360 690 
+             C 310 690 280 660 280 620
+             L 280 575
+             C 280 540 250 515 210 515
+             L 160 515" 
+          fill="none" stroke="#60a5fa" stroke-width="4" stroke-dasharray="14 10" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Branch to Lithium (Lower West) -->
+    <path d="M 280 620
+             C 280 670 250 710 200 710
+             L 160 710"
+          fill="none" stroke="url(#primaryRibbon)" stroke-width="24" stroke-linecap="round" stroke-linejoin="round" />
+    <path d="M 280 620
+             C 280 670 250 710 200 710
+             L 160 710"
+          fill="none" stroke="#60a5fa" stroke-width="4" stroke-dasharray="12 8" stroke-linecap="round" stroke-linejoin="round" />
+
+
+    <!-- Path 2: From Lift to North Wing (Rooms 301, 302, 303) -->
+    <path d="M 580 640 
+             C 580 520 680 430 760 430
+             L 940 430
+             C 1000 430 1020 400 1020 365
+             L 1020 330" 
+          fill="none" stroke="url(#primaryRibbon)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+    
+    <path d="M 580 640 
+             C 580 520 680 430 760 430
+             L 940 430
+             C 1000 430 1020 400 1020 365
+             L 1020 330" 
+          fill="none" stroke="#60a5fa" stroke-width="4" stroke-dasharray="16 10" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Branch into Room 301 (Seylan / Virtusa) -->
+    <path d="M 770 430 
+             C 770 390 790 350 820 350 
+             L 820 330" 
+          fill="none" stroke="url(#primaryRibbon)" stroke-width="20" stroke-linecap="round" />
+
+    <!-- Branch through to Room 303 -->
+    <path d="M 1020 430 
+             L 1220 430 
+             C 1260 430 1280 390 1280 350 
+             L 1280 330" 
+          fill="none" stroke="url(#primaryRibbon)" stroke-width="20" stroke-linecap="round" stroke-linejoin="round" />
+
+
+    <!-- Path 3: From North Corridor past 303 curving down to East Wing (Rooms 305, 306, 307, 308) -->
+    <path d="M 1340 330
+             L 1380 330
+             C 1420 330 1440 360 1440 400
+             L 1440 560
+             C 1440 600 1410 630 1370 630
+             L 1290 630"
+          fill="none" stroke="url(#primaryRibbon)" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" />
+
+    <path d="M 1340 330
+             L 1380 330
+             C 1420 330 1440 360 1440 400
+             L 1440 560
+             C 1440 600 1410 630 1370 630
+             L 1290 630"
+          fill="none" stroke="#60a5fa" stroke-width="4" stroke-dasharray="14 10" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Corridor between upper rooms (305/306) and lower rooms (307/308) -->
+    <path d="M 1440 600
+             L 1440 760
+             C 1440 800 1410 820 1370 820
+             L 1280 820"
+          fill="none" stroke="url(#primaryRibbon)" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" />
+
+    <path d="M 1440 600
+             L 1440 760
+             C 1440 800 1410 820 1370 820
+             L 1280 820"
+          fill="none" stroke="#60a5fa" stroke-width="4" stroke-dasharray="12 8" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Pathway connector from Lift directly to East corridor (Smooth alternate access) -->
+    <path d="M 670 690 
+             C 770 690 850 740 920 740
+             L 980 740"
+          fill="none" stroke="url(#primaryRibbon)" stroke-width="18" stroke-dasharray="8 6" opacity="0.4" stroke-linecap="round" />
+  </g>
+
+  <!-- Glowing Directional Arrow Indicators -->
+  <g id="directional-arrows" fill="#ef4444">
+    <!-- Arrow pointing to West Wing -->
+    <circle cx="230" cy="515" r="14" fill="#dc2626" />
+    <path d="M 233 509 L 223 515 L 233 521" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Arrow pointing down to Lithium -->
+    <circle cx="210" cy="710" r="14" fill="#dc2626" />
+    <path d="M 213 704 L 203 710 L 213 716" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Arrow pointing up to North Wing -->
+    <circle cx="670" cy="455" r="14" fill="#dc2626" />
+    <path d="M 664 458 L 670 449 L 676 458" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Arrow pointing along corridor to Room 303 -->
+    <circle cx="1120" cy="430" r="14" fill="#dc2626" />
+    <path d="M 1116 424 L 1124 430 L 1116 436" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Arrow pointing down corridor to SE Wing -->
+    <circle cx="1440" cy="480" r="14" fill="#dc2626" />
+    <path d="M 1434 476 L 1440 485 L 1446 476" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Arrow pointing into Rooms 305/306 -->
+    <circle cx="1320" cy="630" r="14" fill="#dc2626" />
+    <path d="M 1324 624 L 1315 630 L 1324 636" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+
+    <!-- Arrow pointing into Rooms 307/308 -->
+    <circle cx="1320" cy="820" r="14" fill="#dc2626" />
+    <path d="M 1324 814 L 1315 820 L 1324 826" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+  </g>
+
+
+  <!-- ==================== LIFT / ELEVATOR LOBBY (START LOCATION) ==================== -->
+  <g id="lift-station" transform="translate(480, 640)" filter="url(#liftGlow)">
+    <!-- Base Rounded Container -->
+    <rect width="210" height="100" rx="30" fill="url(#liftGrad)" stroke="#38bdf8" stroke-width="2.5" />
+    
+    <!-- Accent indicator light -->
+    <rect x="20" y="14" width="8" height="72" rx="4" fill="#38bdf8" />
+    
+    <!-- Elevator Graphic Icon -->
+    <g transform="translate(42, 28)">
+      <rect width="40" height="44" rx="6" fill="#1e293b" stroke="#94a3b8" stroke-width="1.5" />
+      <line x1="62" y1="28" x2="62" y2="72" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="3 3" />
+      <!-- Elevator Up & Down Indicators -->
+      <polygon points="56,42 62,34 68,42" fill="#22c55e" />
+      <polygon points="56,58 62,66 68,58" fill="#ef4444" />
+    </g>
+
+    <!-- Text Information -->
+    <text x="100" y="48" font-size="24" font-weight="900" fill="#ffffff" letter-spacing="1">LIFT</text>
+    <text x="100" y="66" font-size="11" font-weight="800" fill="#38bdf8" letter-spacing="1.5">MAIN LOBBY</text>
+    <text x="100" y="80" font-size="9.5" font-weight="600" fill="#94a3b8">STARTING POINT</text>
+
+    <!-- "YOU ARE HERE" Pulsing Badge -->
+    <g transform="translate(85, -16)">
+      <rect width="115" height="26" rx="13" fill="#dc2626" stroke="#ffffff" stroke-width="2" />
+      <circle cx="16" cy="13" r="4" fill="#ffffff" />
+      <text x="28" y="17" font-size="10" font-weight="800" fill="#ffffff" letter-spacing="0.5">YOU ARE HERE</text>
+    </g>
+  </g>
+
+
+  <!-- ==================== NORTH WING: ROOMS 301, 302, 303 ==================== -->
+  
+  <!-- Outer Enclosure for North Wing Group -->
+  <rect x="710" y="160" width="700" height="170" rx="20" fill="#ffffff" filter="url(#softShadow)" stroke="#e2e8f0" stroke-width="1.5" />
+  
+  <!-- North Wing Header Label -->
+  <g transform="translate(730, 142)">
+    <rect width="180" height="26" rx="8" fill="#1e3a8a" />
+    <text x="90" y="17" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="1">NORTH CONCOURSE</text>
+  </g>
+
+  <!-- ================= ROOM 301 (SEYLAN + VIRTUSA) ================= -->
+  <g id="room-301" transform="translate(725, 175)">
+    <!-- Room Container -->
+    <rect width="320" height="140" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    
+    <!-- Room Number Badge -->
+    <g transform="translate(20, -12)">
+      <rect width="80" height="24" rx="12" fill="url(#redAccent)" filter="url(#softShadow)" />
+      <text x="40" y="16" font-size="13" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">301</text>
+    </g>
+
+    <!-- Sub-booth A: SEYLAN BANK -->
+    <g transform="translate(15, 22)">
+      <rect width="138" height="102" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+      
+      <!-- Seylan Red Braided Knot Logo -->
+      <g transform="translate(15, 24)">
+        <path d="M 8 0 C 0 8 0 16 8 24 C 16 32 16 40 8 48" fill="none" stroke="#dc2626" stroke-width="5" stroke-linecap="round" />
+        <path d="M 18 0 C 26 8 26 16 18 24 C 10 32 10 40 18 48" fill="none" stroke="#dc2626" stroke-width="5" stroke-linecap="round" />
+      </g>
+      
+      <text x="52" y="44" font-size="15" font-weight="900" fill="#0f172a" letter-spacing="0.5">SEYLAN</text>
+      <text x="52" y="58" font-size="10.5" font-weight="700" fill="#dc2626" letter-spacing="0.5">BANK</text>
+      
+      <!-- Tag -->
+      <rect x="12" y="76" width="114" height="18" rx="5" fill="#fee2e2" />
+      <text x="69" y="88" font-size="8.5" font-weight="700" fill="#b91c1c" text-anchor="middle">BANKING &amp; FINANCE</text>
+    </g>
+
+    <!-- Divider inside 301 -->
+    <line x1="163" y1="25" x2="163" y2="125" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="3 3" />
+
+    <!-- Sub-booth B: VIRTUSA -->
+    <g transform="translate(172, 22)">
+      <rect width="135" height="102" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+      
+      <!-- Virtusa Tech Icon / Typography -->
+      <g transform="translate(15, 26)">
+        <text x="0" y="24" font-size="22" font-weight="900" fill="#00b050" letter-spacing="-0.5">virtusa</text>
+        <circle cx="85" cy="10" r="3" fill="#0284c7" />
+      </g>
+      
+      <!-- Tag -->
+      <rect x="10" y="76" width="115" height="18" rx="5" fill="#dcfce7" />
+      <text x="67" y="88" font-size="8.5" font-weight="700" fill="#15803d" text-anchor="middle">TECH CONSULTING</text>
+    </g>
+  </g>
+
+
+  <!-- ================= ROOM 302 (EVOKE) ================= -->
+  <g id="room-302" transform="translate(1060, 175)">
+    <!-- Room Container -->
+    <rect width="165" height="140" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    
+    <!-- Room Number Badge -->
+    <g transform="translate(20, -12)">
+      <rect width="80" height="24" rx="12" fill="url(#redAccent)" />
+      <text x="40" y="16" font-size="13" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">302</text>
+    </g>
+
+    <!-- EVOKE Content -->
+    <g transform="translate(12, 22)">
+      <rect width="141" height="102" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+      
+      <!-- EVOKE Logo: Stylized Sigma E -->
+      <g transform="translate(18, 25)">
+        <text x="0" y="22" font-size="20" font-weight="900" fill="#1e293b" letter-spacing="1">ΣVOKE</text>
+        <text x="0" y="34" font-size="6.5" font-weight="600" fill="#64748b" letter-spacing="0.2">Your Vision Inspires Our Innovation</text>
+      </g>
+      
+      <!-- Tag -->
+      <rect x="12" y="76" width="117" height="18" rx="5" fill="#f1f5f9" />
+      <text x="70" y="88" font-size="8.5" font-weight="700" fill="#334155" text-anchor="middle">DIGITAL SERVICES</text>
+    </g>
+  </g>
+
+
+  <!-- ================= ROOM 303 (HNB) ================= -->
+  <g id="room-303" transform="translate(1240, 175)">
+    <!-- Room Container -->
+    <rect width="155" height="140" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    
+    <!-- Room Number Badge -->
+    <g transform="translate(20, -12)">
+      <rect width="80" height="24" rx="12" fill="url(#redAccent)" />
+      <text x="40" y="16" font-size="13" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">303</text>
+    </g>
+
+    <!-- HNB Content -->
+    <g transform="translate(12, 22)">
+      <rect width="131" height="102" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+      
+      <!-- HNB Logo -->
+      <g transform="translate(14, 24)">
+        <text x="0" y="24" font-size="24" font-weight="900" fill="#005baa" letter-spacing="1">HNB</text>
+        <!-- HNB signature corner marker: yellow & cyan -->
+        <rect x="58" y="4" width="16" height="5" fill="#ffd100" />
+        <rect x="69" y="9" width="5" height="15" fill="#00a3e0" />
+      </g>
+      
+      <!-- Tag -->
+      <rect x="10" y="76" width="111" height="18" rx="5" fill="#fef3c7" />
+      <text x="65" y="88" font-size="8.5" font-weight="700" fill="#92400e" text-anchor="middle">BANKING &amp; FINANCE</text>
+    </g>
+  </g>
+
+
+  <!-- ==================== EAST / SOUTH-EAST WING (306, 305, 308, 307) ==================== -->
+  
+  <!-- Outer Enclosure for East Wing -->
+  <rect x="980" y="490" width="460" height="370" rx="20" fill="#ffffff" filter="url(#softShadow)" stroke="#e2e8f0" stroke-width="1.5" />
+  
+  <!-- East Wing Header Label -->
+  <g transform="translate(1000, 472)">
+    <rect width="180" height="26" rx="8" fill="#1e3a8a" />
+    <text x="90" y="17" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="1">EAST CONCOURSE</text>
+  </g>
+
+  <!-- ================= UPPER ROW: ROOM 306 & ROOM 305 ================= -->
+  
+  <!-- Room 306: LK DOMAIN REGISTRY -->
+  <g id="room-306" transform="translate(1000, 515)">
+    <rect width="200" height="150" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    
+    <!-- Badge -->
+    <g transform="translate(20, -12)">
+      <rect width="80" height="24" rx="12" fill="url(#redAccent)" />
+      <text x="40" y="16" font-size="13" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">306</text>
+    </g>
+
+    <!-- Content -->
+    <g transform="translate(12, 20)">
+      <rect width="176" height="116" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+      
+      <!-- LK Domain Registry Brand Lockup -->
+      <g transform="translate(12, 20)">
+        <ellipse cx="18" cy="14" rx="16" ry="12" fill="#eff6ff" stroke="#2563eb" stroke-width="1.5" />
+        <circle cx="8" cy="14" r="2.5" fill="#f97316" />
+        <text x="18" y="18" font-size="11" font-weight="900" fill="#1e40af" text-anchor="middle">.LK</text>
+        
+        <text x="40" y="11" font-size="10" font-weight="900" fill="#1e293b">LK DOMAIN</text>
+        <text x="40" y="21" font-size="9" font-weight="800" fill="#f97316">REGISTRY</text>
+        <text x="0" y="38" font-size="7" font-weight="600" fill="#64748b">Your Sri Lankan Identity in Cyberspace</text>
+      </g>
+
+      <!-- Tag -->
+      <rect x="12" y="84" width="152" height="20" rx="6" fill="#e0e7ff" />
+      <text x="88" y="97" font-size="8.5" font-weight="700" fill="#3730a3" text-anchor="middle">DOMAINS &amp; CYBERSPACE</text>
+    </g>
+  </g>
+
+  <!-- Room 305: BERLIN ENGINEERING -->
+  <g id="room-305" transform="translate(1220, 515)">
+    <rect width="200" height="150" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    
+    <!-- Badge -->
+    <g transform="translate(20, -12)">
+      <rect width="80" height="24" rx="12" fill="url(#redAccent)" />
+      <text x="40" y="16" font-size="13" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">305</text>
+    </g>
+
+    <!-- Content -->
+    <g transform="translate(12, 20)">
+      <rect width="176" height="116" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+      
+      <!-- Berlin Engineering Logo -->
+      <g transform="translate(14, 20)">
+        <!-- Multi-segment polygon "B" -->
+        <path d="M 6 0 L 16 0 C 22 0 26 4 26 10 C 26 14 23 17 19 18 C 24 19 28 23 28 30 C 28 37 23 41 16 41 L 6 41 Z" fill="none" stroke="#8b5cf6" stroke-width="3" />
+        <path d="M 12 8 L 16 8 C 19 8 20 9 20 12 C 20 15 19 16 16 16 L 12 16 Z" fill="#38bdf8" />
+        <path d="M 12 24 L 17 24 C 20 24 22 26 22 29 C 22 32 20 33 17 33 L 12 33 Z" fill="#ec4899" />
+
+        <text x="35" y="18" font-size="13" font-weight="900" fill="#0f172a" letter-spacing="0.5">BERLIN</text>
+        <text x="35" y="32" font-size="9.5" font-weight="800" fill="#64748b" letter-spacing="1">ENGINEERING</text>
+      </g>
+
+      <!-- Tag -->
+      <rect x="12" y="84" width="152" height="20" rx="6" fill="#ede9fe" />
+      <text x="88" y="97" font-size="8.5" font-weight="700" fill="#6d28d9" text-anchor="middle">INDUSTRIAL TECH</text>
+    </g>
+  </g>
+
+
+  <!-- ================= LOWER ROW: ROOM 308 & ROOM 307 ================= -->
+  
+  <!-- Room 308: AMICIS SOLUTIONS -->
+  <g id="room-308" transform="translate(1000, 690)">
+    <rect width="200" height="150" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    
+    <!-- Badge -->
+    <g transform="translate(20, -12)">
+      <rect width="80" height="24" rx="12" fill="url(#redAccent)" />
+      <text x="40" y="16" font-size="13" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">308</text>
+    </g>
+
+    <!-- Content -->
+    <g transform="translate(12, 20)">
+      <rect width="176" height="116" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+      
+      <!-- Amicis Rings Brand -->
+      <g transform="translate(12, 20)">
+        <!-- Concentric loops -->
+        <ellipse cx="14" cy="18" rx="8" ry="16" fill="none" stroke="#06b6d4" stroke-width="3" />
+        <ellipse cx="20" cy="18" rx="8" ry="16" fill="none" stroke="#f59e0b" stroke-width="3" />
+        <ellipse cx="26" cy="18" rx="8" ry="16" fill="none" stroke="#10b981" stroke-width="3" />
+
+        <text x="42" y="24" font-size="18" font-weight="800" fill="#334155" letter-spacing="-0.5">amicis</text>
+      </g>
+
+      <!-- Tag -->
+      <rect x="12" y="84" width="152" height="20" rx="6" fill="#e0f2fe" />
+      <text x="88" y="97" font-size="8.5" font-weight="700" fill="#0369a1" text-anchor="middle">ENTERPRISE SOFTWARE</text>
+    </g>
+  </g>
+
+  <!-- Room 307: OREL IT -->
+  <g id="room-307" transform="translate(1220, 690)">
+    <rect width="200" height="150" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    
+    <!-- Badge -->
+    <g transform="translate(20, -12)">
+      <rect width="80" height="24" rx="12" fill="url(#redAccent)" />
+      <text x="40" y="16" font-size="13" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">307</text>
+    </g>
+
+    <!-- Content -->
+    <g transform="translate(12, 20)">
+      <rect width="176" height="116" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+      
+      <!-- Orel IT Brand -->
+      <g transform="translate(16, 20)">
+        <text x="0" y="24" font-size="22" font-weight="900" fill="#dc2626" letter-spacing="0.5">OREL</text>
+        <rect x="74" y="6" width="30" height="22" rx="6" fill="#dc2626" />
+        <text x="89" y="22" font-size="14" font-weight="900" fill="#ffffff" text-anchor="middle">IT</text>
+      </g>
+
+      <!-- Tag -->
+      <rect x="12" y="84" width="152" height="20" rx="6" fill="#fee2e2" />
+      <text x="88" y="97" font-size="8.5" font-weight="700" fill="#b91c1c" text-anchor="middle">AI &amp; DIGITAL SOLUTIONS</text>
+    </g>
+  </g>
+
+
+  <!-- ==================== WEST WING: NEO LAB & LITHIUM ==================== -->
+  
+  <!-- Outer Enclosure for West Wing -->
+  <rect x="50" y="470" width="380" height="390" rx="20" fill="#ffffff" filter="url(#softShadow)" stroke="#e2e8f0" stroke-width="1.5" />
+  
+  <!-- West Wing Header Label -->
+  <g transform="translate(70, 452)">
+    <rect width="180" height="26" rx="8" fill="#1e3a8a" />
+    <text x="90" y="17" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="1">WEST CONCOURSE</text>
+  </g>
+
+  <!-- UPPER BOX: NEO LAB & COMPANION BOOTH -->
+  <g id="west-room-upper" transform="translate(70, 495)">
+    <!-- Room Container -->
+    <rect width="340" height="160" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    
+    <!-- Wing Sub-badge -->
+    <g transform="translate(20, -12)">
+      <rect width="110" height="24" rx="12" fill="#1e293b" />
+      <text x="55" y="16" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">ZONE W-1</text>
+    </g>
+
+    <!-- Left Slot: NEO LAB -->
+    <g transform="translate(15, 22)">
+      <rect width="145" height="120" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+      
+      <!-- Neo Lab Ribbon 'N' Logo -->
+      <g transform="translate(48, 14)">
+        <path d="M 10 38 L 10 10 C 10 4 16 0 22 0 C 28 0 34 6 36 12 L 44 32 C 46 36 50 40 56 40 C 62 40 66 34 66 28 L 66 6" 
+              fill="none" stroke="#f59e0b" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" />
+        <path d="M 36 12 L 44 32" fill="none" stroke="#ec4899" stroke-width="7" stroke-linecap="round" />
+        <circle cx="10" cy="10" r="3.5" fill="#10b981" />
+        <circle cx="66" cy="6" r="3.5" fill="#3b82f6" />
+      </g>
+      
+      <text x="72" y="78" font-size="13" font-weight="900" fill="#0f172a" text-anchor="middle" letter-spacing="0.5">NEO LAB</text>
+      
+      <!-- Tag -->
+      <rect x="12" y="90" width="121" height="20" rx="5" fill="#fef3c7" />
+      <text x="72" y="103" font-size="8.5" font-weight="700" fill="#92400e" text-anchor="middle">SOFTWARE &amp; CLOUD</text>
+    </g>
+
+    <!-- Divider inside Zone W-1 -->
+    <line x1="170" y1="25" x2="170" y2="140" stroke="#cbd5e1" stroke-width="1.5" stroke-dasharray="3 3" />
+
+    <!-- Right Slot: INFORMATION & CAREER HELP DESK (Formerly empty slot) -->
+    <g transform="translate(180, 22)">
+      <rect width="145" height="120" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1.5" stroke-dasharray="5 3" />
+      
+      <!-- Help Desk Icon -->
+      <g transform="translate(56, 16)">
+        <circle cx="16" cy="16" r="16" fill="#dcfce7" />
+        <path d="M 12 12 Q 16 8 20 12 Q 20 16 16 18 L 16 21" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" />
+        <circle cx="16" cy="25" r="1.5" fill="#16a34a" />
+      </g>
+      
+      <text x="72" y="68" font-size="11" font-weight="900" fill="#166534" text-anchor="middle">INFO &amp; CGU DESK</text>
+      <text x="72" y="82" font-size="8.5" font-weight="600" fill="#15803d" text-anchor="middle">CAREER ADVICE / CV DROP</text>
+      
+      <!-- Status Tag -->
+      <rect x="18" y="92" width="109" height="18" rx="5" fill="#bbf7d0" />
+      <text x="72" y="104" font-size="8" font-weight="800" fill="#14532d" text-anchor="middle">STUDENT ASSISTANCE</text>
+    </g>
+  </g>
+
+
+  <!-- LOWER BOX: LITHIUM -->
+  <g id="west-room-lower" transform="translate(70, 680)">
+    <rect width="340" height="155" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
+    
+    <!-- Wing Sub-badge -->
+    <g transform="translate(20, -12)">
+      <rect width="110" height="24" rx="12" fill="#1e293b" />
+      <text x="55" y="16" font-size="11" font-weight="800" fill="#ffffff" text-anchor="middle" letter-spacing="0.5">ZONE W-2</text>
+    </g>
+
+    <!-- Content -->
+    <g transform="translate(20, 20)">
+      <rect width="300" height="115" rx="10" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1" />
+      
+      <!-- Lithium Logo -->
+      <g transform="translate(30, 20)">
+        <!-- Gothic/Medieval 'L' -->
+        <text x="15" y="38" font-size="38" font-family="'Times New Roman',serif" font-weight="900" fill="#991b1b">𝕷</text>
+        <text x="48" y="30" font-size="24" font-weight="900" fill="#0f172a" letter-spacing="1">ITHIUM</text>
+        <text x="50" y="46" font-size="8" font-weight="800" fill="#dc2626" letter-spacing="2">PROFESSION TO PERFECTION</text>
+      </g>
+
+      <!-- Tag -->
+      <rect x="70" y="80" width="160" height="22" rx="6" fill="#f1f5f9" />
+      <text x="150" y="94" font-size="9" font-weight="700" fill="#334155" text-anchor="middle">TECH INNOVATIONS &amp; CONSULTING</text>
+    </g>
+  </g>
+
+
+  <!-- ==================== FOOTER & LEGEND ==================== -->
+  <g id="footer-legend" transform="translate(60, 900)">
+    <!-- Legend Card -->
+    <rect width="1480" height="70" rx="16" fill="#ffffff" filter="url(#softShadow)" stroke="#e2e8f0" stroke-width="1" />
+    
+    <g transform="translate(30, 22)">
+      <!-- Legend Title -->
+      <text x="0" y="18" font-size="12" font-weight="900" fill="#0f172a" letter-spacing="1">MAP LEGEND:</text>
+      
+      <!-- Item 1: Lift Hub -->
+      <g transform="translate(130, 2)">
+        <rect width="28" height="20" rx="6" fill="#0f172a" />
+        <polygon points="10,14 14,8 18,14" fill="#22c55e" />
+        <text x="36" y="15" font-size="11" font-weight="700" fill="#334155">Lift &amp; Main Entrance</text>
+      </g>
+
+      <!-- Item 2: Walkway Pathway -->
+      <g transform="translate(350, 2)">
+        <line x1="0" y1="10" x2="36" y2="10" stroke="#1d4ed8" stroke-width="6" stroke-linecap="round" />
+        <line x1="0" y1="10" x2="36" y2="10" stroke="#60a5fa" stroke-width="2" stroke-dasharray="4 4" stroke-linecap="round" />
+        <text x="46" y="15" font-size="11" font-weight="700" fill="#334155">Primary Visitor Corridor</text>
+      </g>
+
+      <!-- Item 3: Directional Flow -->
+      <g transform="translate(610, 2)">
+        <circle cx="10" cy="10" r="10" fill="#dc2626" />
+        <path d="M 8 6 L 14 10 L 8 14" fill="none" stroke="#ffffff" stroke-width="2" stroke-linecap="round" />
+        <text x="28" y="15" font-size="11" font-weight="700" fill="#334155">Flow Direction Indicator</text>
+      </g>
+
+      <!-- Item 4: Room Badges -->
+      <g transform="translate(850, 2)">
+        <rect width="40" height="18" rx="9" fill="#dc2626" />
+        <text x="20" y="13" font-size="9" font-weight="900" fill="#ffffff" text-anchor="middle">30X</text>
+        <text x="48" y="15" font-size="11" font-weight="700" fill="#334155">Numbered Interview Rooms</text>
+      </g>
+
+      <!-- Event Note / Hotline -->
+      <g transform="translate(1170, 0)">
+        <text x="0" y="10" font-size="10.5" font-weight="800" fill="#1e3a8a">School of Computing &amp; Engineering</text>
+        <text x="0" y="24" font-size="9" font-weight="600" fill="#64748b">Need assistance? Visit the CGU Help Desk in Zone W-1</text>
+      </g>
+    </g>
+  </g>
+
+</svg>

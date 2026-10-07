@@ -35,10 +35,11 @@ export interface DutyAssignment {
   slotLabel: string; // "Morning (09:00 - 12:00)", "Afternoon (13:00 - 16:00)", "Sunday CCS (16:30 - 17:30)", etc.
   startTime: string; // "09:00", "13:00", "16:30"
   endTime: string;   // "12:00", "16:00", "17:30"
-  batchName: string; // e.g. "DSE 24.1F", "CCS", "DCSD 23.2"
-  moduleName: string;// e.g. "Database Systems", "Software Architecture"
+  dutyType: string;  // e.g. "Teaching Duty", "CGU (Career Guidance Unit Call Handling)", "Lab Inspection"
+  batchName?: string;// e.g. "DSE 24.1F", "CCS", "DCSD 23.2" -- only set for Teaching Duty
+  moduleName?: string;// e.g. "Database Systems", "Software Architecture" -- only set for Teaching Duty
   roomLab?: string;  // e.g. "Lab 02", "Hardware Lab"
-  notes?: string;
+  notes?: string;    // free-text details, used in place of batch/module for non-Teaching-Duty types
 }
 
 export interface NightShift {
@@ -59,6 +60,7 @@ export interface LeaveRequest {
   endDate: string;   // YYYY-MM-DD
   reason: string;
   status: LeaveStatus;
+  appliedAt: string; // ISO 8601 string recording the exact date and time of application
   reviewedById?: string;
   reviewedByName?: string;
   reviewedAt?: string;
@@ -114,4 +116,60 @@ export interface AcademicCatalog {
   batches: string[];
   rooms: string[];
   modules: string[];
+  dutyTypes: string[];
+  autoRefreshSeconds?: number;
 }
+
+export interface AiProposedDuty {
+  id: string; // temporary or target ID
+  action: 'CREATE' | 'UPDATE' | 'DELETE';
+  dutyDate: string;
+  slotLabel: string;
+  startTime: string;
+  endTime: string;
+  instructorId: string;
+  instructorName: string;
+  dutyType: string;
+  batchName?: string;
+  moduleName?: string;
+  roomLab?: string;
+  notes?: string;
+  reason: string;
+}
+
+export interface AiConflictReport {
+  unassignedSlotsCount: number;
+  unassignedNightShiftsCount: number;
+  workloadImbalances: Array<{
+    instructorId: string;
+    instructorName: string;
+    sessionCount: number;
+    teachingHours: number;
+    status: 'OVERLOAD' | 'BALANCED' | 'UNDERLOAD';
+  }>;
+  conflicts: Array<{
+    type: 'DOUBLE_BOOKING' | 'LEAVE_COLLISION' | 'UNSTAFFED_NIGHT';
+    description: string;
+    date: string;
+    slot?: string;
+    instructorName?: string;
+  }>;
+  recommendations: string[];
+}
+
+export interface AiSubstituteSuggestion {
+  instructor: User;
+  currentWeeklyHours: number;
+  isAvailable: boolean;
+  score: number;
+  matchReason: string;
+}
+
+export interface PushToken {
+  id: string;
+  userId: string;
+  token: string;
+  device?: string;
+  createdAt: string;
+}
+

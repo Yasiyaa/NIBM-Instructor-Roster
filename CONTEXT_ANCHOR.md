@@ -39,19 +39,20 @@ This system is an enterprise-grade academic operations platform designed for NIB
 
 ## 3. The Core Cadre Model & Non-Negotiable Invariants
 
-### A. The 8-Member Teaching Cadre Rule
-The academic teaching cadre consists of **strictly 8 individuals**:
-- **2 Demonstrators (Roster Masters)**:
+### A. The 9-Member Teaching Cadre Rule
+The academic teaching cadre consists of **strictly 9 individuals**:
+- **3 Demonstrators (Roster Masters)**:
   1. `yasith@nibm.lk` — **Yasith** (Phone: `071 257 0137`)
   2. `kithnuka@nibm.lk` — **Kithnuka** (Phone: `076 783 3449`)
-  *Both have equal permissions: full scheduling, 1-click duplication, publishing, and leave approval/rejection authority.*
+  3. `sandali@nibm.lk` — **Sandali**
+  *All three have equal permissions: full scheduling, 1-click duplication, publishing, and leave approval/rejection authority.*
 - **6 Technical Instructors**:
-  3. `nithara@nibm.lk` — **Nithara** (Phone: `074 015 0405`)
-  4. `nipun@nibm.lk` — **Nipun** (Phone: `071 217 9220`)
-  5. `gimasha@nibm.lk` — **Gimasha** (Phone: `077 116 4048`)
-  6. `binal@nibm.lk` — **Binal** (Phone: `071 305 5035`)
-  7. `poorna@nibm.lk` — **Poorna** (Phone: `071 553 6337`)
-  8. `supun@nibm.lk` — **Supun** (Phone: `075 792 2488`)
+  4. `nithara@nibm.lk` — **Nithara** (Phone: `074 015 0405`)
+  5. `nipun@nibm.lk` — **Nipun** (Phone: `071 217 9220`)
+  6. `gimasha@nibm.lk` — **Gimasha** (Phone: `077 116 4048`)
+  7. `binal@nibm.lk` — **Binal** (Phone: `071 305 5035`)
+  8. `poorna@nibm.lk` — **Poorna** (Phone: `071 553 6337`)
+  9. `supun@nibm.lk` — **Supun** (Phone: `075 792 2488`, Technical Assistant)
 - **Executive Leadership**:
   - `thisara@nibm.lk` — **Dr. Thisara** (Executive / Director, Phone: `071 987 6543`). Full cockpit visibility, leave approval authority, direct WhatsApp emergency contact.
 - **Campus Lab Kiosk**:
@@ -61,8 +62,8 @@ The academic teaching cadre consists of **strictly 8 individuals**:
 
 ### B. Mathematical Free-Standby Invariant
 At any given operational moment or filter slot:
-$$\text{FreeStandby} = 8 - (\text{OnDuty} + \text{OnLeave})$$
-Every member of the 8-person teaching cadre must exist in **exactly one** of the three mutually exclusive operational states:
+$$\text{FreeStandby} = 9 - (\text{OnDuty} + \text{OnLeave})$$
+Every member of the 9-person teaching cadre must exist in **exactly one** of the three mutually exclusive operational states:
 1. **On Duty**: Assigned to a scheduled lecture, lab session, or CCS module.
 2. **On Leave**: Covered by an approved `LeaveRequest` spanning the date.
 3. **Free Standby**: Available in the staff room for emergency student consultations, lab maintenance, or substitute cover.
@@ -104,7 +105,7 @@ NIBM-Instructor-Roster/
 ├── .github/workflows/ci.yml      # CI/CD pipeline (lint, build, domain tests)
 ├── prisma/
 │   ├── schema.prisma             # PostgreSQL schema definition
-│   └── seed.ts                   # Database seed (8 cadre + 1 exec + 1 kiosk)
+│   └── seed.ts                   # Database seed (9 cadre + 1 exec + 1 kiosk)
 ├── scripts/
 │   └── verify-domain-rules.ts    # 12 automated domain invariant tests
 ├── src/
@@ -191,7 +192,7 @@ The following core roadmap and enterprise features are fully implemented and ver
 
 ## 8. Development Ground Rules for AI Agents & Engineers
 
-- **Preserve Mathematical Invariants**: Under no circumstance should a change violate the $N = 8$ cadre rule or allow an instructor to be double-booked or scheduled while on approved leave.
+- **Preserve Mathematical Invariants**: Under no circumstance should a change violate the $N = 9$ cadre rule or allow an instructor to be double-booked or scheduled while on approved leave.
 - **Maintain Zero-Warning Cleanliness**: Always verify `npm run lint` and `npm run build` after completing edits.
 - **Zero Raw Passwords**: All credential mutations must be validated with current password verification and hashed with `bcrypt.hash(password, 10)`.
 - **Database Safety**: All destructive or multi-record mutations in `src/lib/storage.ts` or `src/lib/actions.ts` must execute inside `prisma.$transaction`.

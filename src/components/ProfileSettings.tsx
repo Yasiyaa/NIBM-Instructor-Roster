@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Mail, Phone, Lock, CheckCircle2, AlertCircle, UserCircle } from 'lucide-react';
+import { Mail, Phone, Lock, CheckCircle2, AlertCircle, UserCircle, Eye, EyeOff } from 'lucide-react';
 import { User } from '@/types';
 import { updateProfileAction, changePasswordAction } from '@/lib/actions';
 
@@ -16,14 +16,16 @@ const ROLE_LABELS: Record<User['role'], string> = {
 interface ProfileSettingsProps {
   currentUser: User;
   onUpdated: () => void;
+  isRefreshing?: boolean;
 }
 
-export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ currentUser, onUpdated }) => {
+export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ currentUser, onUpdated, isRefreshing }) => {
   const [email, setEmail] = useState(currentUser.email || '');
   const [phone, setPhone] = useState(currentUser.phone || '');
   const [contactError, setContactError] = useState<string | null>(null);
   const [contactSuccess, setContactSuccess] = useState(false);
   const [savingContact, setSavingContact] = useState(false);
+  const busyContact = savingContact || !!isRefreshing;
 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -31,6 +33,9 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ currentUser, o
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [passwordSuccess, setPasswordSuccess] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const handleSaveContact = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,14 +43,15 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ currentUser, o
     setContactSuccess(false);
     setSavingContact(true);
     const res = await updateProfileAction({ email, phone });
-    setSavingContact(false);
 
     if (!res.success) {
+      setSavingContact(false);
       setContactError(res.error);
       return;
     }
     setContactSuccess(true);
     onUpdated();
+    setSavingContact(false);
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -140,10 +146,10 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ currentUser, o
           </div>
           <button
             type="submit"
-            disabled={savingContact}
-            className="text-sm font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg transition-colors cursor-pointer"
+            disabled={busyContact}
+            className="text-sm font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg transition-colors cursor-pointer"
           >
-            {savingContact ? 'Saving...' : 'Save Contact Info'}
+            {busyContact ? 'Saving...' : 'Save Contact Info'}
           </button>
         </form>
       </div>
@@ -168,39 +174,72 @@ export const ProfileSettings: React.FC<ProfileSettingsProps> = ({ currentUser, o
           )}
           <div>
             <label className="block text-xs font-medium text-slate-400 mb-1.5">Current Password</label>
-            <input
-              type="password"
-              value={currentPassword}
-              onChange={(e) => setCurrentPassword(e.target.value)}
-              className="w-full text-sm bg-slate-950 border border-slate-700 text-white rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showCurrent ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="w-full text-sm bg-slate-950 border border-slate-700 text-white rounded-lg px-3 pr-9 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowCurrent((v) => !v)}
+                tabIndex={-1}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
+                title={showCurrent ? 'Hide password' : 'Show password'}
+              >
+                {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-400 mb-1.5">New Password</label>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="At least 8 characters"
-              className="w-full text-sm bg-slate-950 border border-slate-700 text-white rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-600"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showNew ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                placeholder="At least 8 characters"
+                className="w-full text-sm bg-slate-950 border border-slate-700 text-white rounded-lg px-3 pr-9 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-600"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowNew((v) => !v)}
+                tabIndex={-1}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
+                title={showNew ? 'Hide password' : 'Show password'}
+              >
+                {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-400 mb-1.5">Confirm New Password</label>
-            <input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              className="w-full text-sm bg-slate-950 border border-slate-700 text-white rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-              required
-            />
+            <div className="relative">
+              <input
+                type={showConfirm ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="w-full text-sm bg-slate-950 border border-slate-700 text-white rounded-lg px-3 pr-9 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirm((v) => !v)}
+                tabIndex={-1}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
+                title={showConfirm ? 'Hide password' : 'Show password'}
+              >
+                {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
           <button
             type="submit"
             disabled={savingPassword}
-            className="text-sm font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white px-5 py-2.5 rounded-lg transition-colors cursor-pointer"
+            className="text-sm font-medium bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-lg transition-colors cursor-pointer"
           >
             {savingPassword ? 'Saving...' : 'Update Password'}
           </button>

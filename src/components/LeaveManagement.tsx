@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { User, LeaveRequest } from '@/types';
 import { Clock } from 'lucide-react';
 import { reviewLeaveAction } from '@/lib/actions';
+import { formatApplicationDateTime } from '@/lib/roster-utils';
 
 interface LeaveManagementProps {
   currentUser: User;
@@ -127,15 +128,18 @@ export const LeaveManagement: React.FC<LeaveManagementProps> = ({
                       </span>
                     </div>
 
-                    <div className="flex items-center space-x-3 text-xs text-slate-500 mt-1">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400 mt-1">
                       <span>
                         Dates:{' '}
-                        <strong className="text-slate-300">
+                        <strong className="text-slate-200">
                           {leave.startDate} {leave.startDate !== leave.endDate && `to ${leave.endDate}`}
                         </strong>
                       </span>
                       <span>•</span>
-                      <span>Submitted: {new Date(leave.createdAt).toLocaleDateString()}</span>
+                      <span className="flex items-center gap-1.5 text-slate-300">
+                        <Clock className="w-3.5 h-3.5 text-amber-400" />
+                        <span>Applied: <strong>{formatApplicationDateTime(leave.appliedAt || leave.createdAt)}</strong></span>
+                      </span>
                     </div>
 
                     <p className="text-xs text-slate-300 mt-2 bg-slate-800/70 p-2 rounded-lg border border-slate-800/60 inline-block max-w-xl">

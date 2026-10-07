@@ -1,3 +1,5 @@
+export {};
+
 // Runs against the dedicated Neon "test" branch (TEST_DATABASE_URL), never
 // the production database, so this suite can never write real leave
 // requests / night shifts / audit entries into live data. Create the branch
@@ -8,8 +10,14 @@ if (!process.env.TEST_DATABASE_URL || !process.env.TEST_DATABASE_URL_UNPOOLED) {
   );
   process.exit(1);
 }
-process.env.DATABASE_URL = process.env.TEST_DATABASE_URL;
-process.env.DATABASE_URL_UNPOOLED = process.env.TEST_DATABASE_URL_UNPOOLED;
+function ensureConnectTimeout(urlStr: string): string {
+  if (urlStr.includes('connect_timeout=')) return urlStr;
+  const separator = urlStr.includes('?') ? '&' : '?';
+  return `${urlStr}${separator}connect_timeout=20`;
+}
+
+process.env.DATABASE_URL = ensureConnectTimeout(process.env.TEST_DATABASE_URL);
+process.env.DATABASE_URL_UNPOOLED = ensureConnectTimeout(process.env.TEST_DATABASE_URL_UNPOOLED);
 
 async function main() {
   const {
@@ -22,6 +30,7 @@ async function main() {
     getInstructors,
     getOrCreateRosterWeek,
   } = await import('../src/lib/storage');
+  const { isSameSession, getMatchingOppositeSlotDuty, mergeDutyAssignments } = await import('../src/lib/roster-utils');
   const { prisma } = await import('../src/lib/prisma');
 
   console.log('====================================================');
@@ -46,12 +55,17 @@ async function main() {
   try {
     // 1. Verify Cadre Count
     const instructors = await getInstructors();
-    assert(instructors.length === 8, `Cadre count should be exactly 8 instructors (found: ${instructors.length})`);
+    assert(instructors.length === 9, `Cadre count should be exactly 9 instructors (found: ${instructors.length})`);
 
     // 2. Collision Rule: Double Booking Prevention
     const testDate = `2030-05-${Math.floor(Math.random() * 20 + 10)}`; // Unique future test date
-    const week = await getOrCreateRosterWeek('2030-05-06'); // Monday of that test week
+    const week = await getOrCreateRosterWeek(testDate); // Week starting on testDate
     const inst1 = instructors[0];
+
+    // Clean up any surviving test fixtures on this test date
+    await prisma.dutyAssignment.deleteMany({ where: { dutyDate: testDate } });
+    await prisma.nightShift.deleteMany({ where: { shiftDate: testDate } });
+    await prisma.leaveRequest.deleteMany({ where: { startDate: testDate } });
 
     const assign1 = await addDutyAssignment({
       rosterWeekId: week.id,
@@ -60,6 +74,7 @@ async function main() {
       slotLabel: 'Morning (09:00 - 12:00)',
       startTime: '09:00',
       endTime: '12:00',
+      dutyType: 'Teaching Duty',
       batchName: 'DSE 24.1F',
       moduleName: 'Database Systems',
     });
@@ -73,6 +88,7 @@ async function main() {
       slotLabel: 'Morning (09:00 - 12:00)',
       startTime: '09:00',
       endTime: '12:00',
+      dutyType: 'Teaching Duty',
       batchName: 'DCSD 24.1P',
       moduleName: 'Algorithms',
     });
@@ -80,12 +96,23 @@ async function main() {
 
     // 3. Leave Precedence Rule: Cannot assign instructor on approved leave
     const inst2 = instructors[1];
+    const beforeApply = Date.now();
     const leaveReq = await createLeaveRequest(inst2.id, testDate, testDate, 'Doctor appointment');
     createdLeaveIds.push(leaveReq.id);
     assert(leaveReq.status === 'PENDING', 'Leave request created in PENDING state');
+    assert(
+      typeof leaveReq.appliedAt === 'string' && !isNaN(new Date(leaveReq.appliedAt).getTime()),
+      `Leave application records valid appliedAt date and time (${leaveReq.appliedAt})`
+    );
+    const appliedTime = new Date(leaveReq.appliedAt).getTime();
+    assert(
+      appliedTime >= beforeApply - 1000 && appliedTime <= Date.now() + 1000,
+      'Leave application timestamp accurately reflects the exact date and time applied'
+    );
 
     // Yasith / Dr. Thisara approves
-    const approvedLeave = await reviewLeaveRequest(leaveReq.id, 'APPROVED', 'user-yasith', 'Approved for health reason');
+    const reviewer = instructors.find((i) => i.role === 'DEMONSTRATOR')?.id || inst1.id;
+    const approvedLeave = await reviewLeaveRequest(leaveReq.id, 'APPROVED', reviewer, 'Approved for health reason');
     assert(approvedLeave.status === 'APPROVED', 'Leave transitioned to APPROVED');
 
     // Attempt assigning duty to inst2 on leave date
@@ -96,6 +123,7 @@ async function main() {
       slotLabel: 'Afternoon (13:00 - 16:00)',
       startTime: '13:00',
       endTime: '16:00',
+      dutyType: 'Teaching Duty',
       batchName: 'HDCN 23.2',
       moduleName: 'Networks',
     });
@@ -115,20 +143,191 @@ async function main() {
     // inst1 is on Duty (09:00-12:00)
     // inst2 is on Leave
     // inst3 has night duty (daytime is free)
-    // inst4..inst8 (5 instructors) are not assigned to Morning slot
-    // Total cadre = 8. In Morning slot: 1 On Duty, 1 On Leave => 6 Free Standby!
+    // inst4..inst9 (6 instructors) are not assigned to Morning slot
+    // Total cadre = 9. In Morning slot: 1 On Duty, 1 On Leave => 7 Free Standby!
     const report = await getExecutiveStatus(testDate, 'Morning (09:00 - 12:00)');
     assert(report.onDuty.length === 1, `On duty count matches (Expected: 1, Found: ${report.onDuty.length})`);
     assert(report.onLeave.length === 1, `On leave count matches (Expected: 1, Found: ${report.onLeave.length})`);
-    assert(report.freeStandby.length === 6, `Free standby count matches (Expected: 6, Found: ${report.freeStandby.length})`);
+    assert(report.freeStandby.length === 7, `Free standby count matches (Expected: 7, Found: ${report.freeStandby.length})`);
     assert(
       report.nightDutyInstructor?.id === inst3.id,
       `Night duty officer correctly identified (${report.nightDutyInstructor?.fullName})`
     );
 
-    // 6. Cleanup the surviving duty assignment (the double-booking/leave attempts never persisted)
+    // 6. Verify Full-Day Session Logic & Unification
+    const morningSample = {
+      id: 'duty-m-1',
+      rosterWeekId: week.id,
+      instructorId: inst1.id,
+      instructorName: inst1.fullName,
+      dutyDate: testDate,
+      slotLabel: 'Morning (09:00 - 12:00)',
+      startTime: '09:00',
+      endTime: '12:00',
+      dutyType: 'Teaching Duty',
+      batchName: 'DSE 24.1F',
+      moduleName: 'Database Systems',
+      roomLab: 'Lab 1',
+      notes: 'Morning theory',
+    };
+    const afternoonSample = {
+      id: 'duty-a-1',
+      rosterWeekId: week.id,
+      instructorId: inst1.id,
+      instructorName: inst1.fullName,
+      dutyDate: testDate,
+      slotLabel: 'Afternoon (13:00 - 16:00)',
+      startTime: '13:00',
+      endTime: '16:00',
+      dutyType: 'Teaching Duty',
+      batchName: 'DSE 24.1F',
+      moduleName: 'Database Systems',
+      roomLab: 'Lab 1',
+      notes: 'Afternoon practical',
+    };
+
+    assert(isSameSession(morningSample, afternoonSample) === true, 'isSameSession recognizes matching session');
+    assert(
+      getMatchingOppositeSlotDuty(morningSample, [morningSample, afternoonSample])?.id === 'duty-a-1',
+      'getMatchingOppositeSlotDuty correctly pairs morning with afternoon'
+    );
+
+    const merged = mergeDutyAssignments([morningSample, afternoonSample]);
+    assert(merged.length === 1, `mergeDutyAssignments reduces pair to single entry (length: ${merged.length})`);
+    assert(
+      merged[0].startTime === '09:00' && merged[0].endTime === '16:00',
+      `Merged session time spans 09:00 - 16:00 (got: ${merged[0].startTime} - ${merged[0].endTime})`
+    );
+    assert(
+      merged[0].slotLabel === 'Full Day (09:00 - 16:00)',
+      `Merged slotLabel is Full Day (09:00 - 16:00)`
+    );
+    assert(
+      merged[0].notes === 'Morning theory • Afternoon practical',
+      `Combined notes preserved both session notes (got: ${merged[0].notes})`
+    );
+
+    // 7. Full-Day DB integration with getExecutiveStatus
+    const assign2 = await addDutyAssignment({
+      rosterWeekId: week.id,
+      instructorId: inst1.id,
+      dutyDate: testDate,
+      slotLabel: 'Afternoon (13:00 - 16:00)',
+      startTime: '13:00',
+      endTime: '16:00',
+      dutyType: 'Teaching Duty',
+      batchName: 'DSE 24.1F',
+      moduleName: 'Database Systems',
+    });
+    assert(assign2.success === true, 'Successfully allocated matching afternoon slot');
+
+    const execReportAll = await getExecutiveStatus(testDate, 'ALL');
+    const inst1Duties = execReportAll.onDuty.filter((d) => d.instructor.id === inst1.id);
+    assert(
+      inst1Duties.length === 1,
+      `getExecutiveStatus(ALL) merges matching slots into single onDuty entry (count: ${inst1Duties.length})`
+    );
+    assert(
+      inst1Duties[0]?.assignment.startTime === '09:00' && inst1Duties[0]?.assignment.endTime === '16:00',
+      `Executive report presents unified 09:00 - 16:00 timing`
+    );
+
+    // 8. AI Roster Health Radar Verification
+    const {
+      scanRosterHealth,
+      findEligibleSubstitutes,
+      runDeterministicScheduler,
+      validateProposedChanges,
+    } = await import('../src/lib/ai-scheduler');
+    const { getCatalog } = await import('../src/lib/storage');
+    const catalog = await getCatalog();
+
+    const testNightShift = {
+      id: 'test-night-shift',
+      rosterWeekId: week.id,
+      instructorId: inst3.id,
+      instructorName: inst3.fullName,
+      shiftDate: testDate,
+      notes: 'Caretaker',
+    };
+
+    const healthReport = scanRosterHealth({
+      rosterWeek: week,
+      dutyAssignments: [assign1.assignment!, assign2.assignment!],
+      nightShifts: [testNightShift],
+      leaveRequests: [approvedLeave],
+      allInstructors: instructors,
+    });
+    assert(Array.isArray(healthReport.conflicts), 'AI Health Radar returns conflicts array');
+    assert(Array.isArray(healthReport.workloadImbalances), 'AI Health Radar returns workload imbalances');
+    assert(
+      healthReport.workloadImbalances.length ===
+        instructors.filter((i) => i.role !== 'EXECUTIVE' && i.username !== 'instructors').length,
+      'AI Health Radar tracks all teaching cadre instructors'
+    );
+    assert(typeof healthReport.unassignedSlotsCount === 'number', 'AI Health Radar computes unassigned slots count');
+
+    // 9. AI Smart Substitute Finder Verification
+    // inst2 is on approved leave on testDate. Let's find substitutes for inst2 for Morning slot
+    const subs = findEligibleSubstitutes({
+      dateStr: testDate,
+      startTime: '09:00',
+      absentInstructorId: inst2.id,
+      allInstructors: instructors,
+      dutyAssignments: [assign1.assignment!],
+      nightShifts: [testNightShift],
+      leaveRequests: [approvedLeave],
+    });
+    assert(Array.isArray(subs), 'AI Substitute Finder returns array of suggestions');
+    assert(subs.length > 0, 'AI Substitute Finder finds available standby candidates');
+    assert(!subs.some((s) => s.instructor.id === inst2.id), 'AI Substitute Finder excludes the absent instructor');
+    assert(
+      !subs.some((s) => s.instructor.id === inst1.id),
+      'AI Substitute Finder excludes instructor busy teaching during that slot'
+    );
+    assert(subs.every((s) => s.score > 0), 'All suggested substitutes have positive fitness scores');
+
+    // 10. AI Deterministic CSP Scheduler Verification
+    const proposed = runDeterministicScheduler({
+      rosterWeek: week,
+      dutyAssignments: [],
+      nightShifts: [],
+      leaveRequests: [approvedLeave],
+      allInstructors: instructors,
+      catalog,
+      targetDate: testDate,
+    });
+    assert(
+      Array.isArray(proposed) && proposed.length > 0,
+      `Deterministic CSP generates proposed duty assignments (count: ${proposed.length})`
+    );
+
+    // Invariant: inst2 is on approved leave on testDate; verify inst2 was NEVER assigned
+    const assignedInst2OnLeave = proposed.filter(
+      (p) => p.instructorId === inst2.id && p.dutyDate === testDate
+    );
+    assert(
+      assignedInst2OnLeave.length === 0,
+      'Deterministic CSP strictly respects leave precedence (0 assignments for instructor on leave)'
+    );
+
+    // Invariant: Verify 0 double bookings and 100% invariant compliance
+    const validated = validateProposedChanges({
+      proposed,
+      existingDuties: [],
+      leaveRequests: [approvedLeave],
+    });
+    assert(
+      validated.length === proposed.length,
+      'Deterministic CSP proposed changes 100% pass invariant validation'
+    );
+
+    // 11. Cleanup surviving duty assignments
     if (assign1.assignment) {
       await deleteDutyAssignment(assign1.assignment.id);
+    }
+    if (assign2.assignment) {
+      await deleteDutyAssignment(assign2.assignment.id);
     }
   } finally {
     // Leave requests, night shifts, and the audit trail entries generated by

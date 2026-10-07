@@ -11,13 +11,14 @@ import {
   addDutyAssignment,
   deleteDutyAssignment,
   setNightShift,
+  removeNightShift,
   publishRosterWeek,
   createLeaveRequest,
   reviewLeaveRequest,
   getExecutiveStatus,
   getAuditLogs,
   cloneWeekAssignments,
-  getCatalog,
+  getCachedCatalog,
   addCatalogBatch,
   removeCatalogBatch,
   updateCatalogBatch,
@@ -27,6 +28,10 @@ import {
   addCatalogModule,
   removeCatalogModule,
   updateCatalogModule,
+  addCatalogDutyType,
+  removeCatalogDutyType,
+  updateCatalogDutyType,
+  updateAutoRefreshInterval,
   verifyCredentials,
   createUser,
   changePassword,
@@ -39,9 +44,15 @@ import {
 } from './storage';
 import { createSession, deleteSession } from './session';
 import { getCurrentUser } from './auth';
-import { Role, User } from '@/types';
-import { revalidatePath } from 'next/cache';
+import { Role, User, AiProposedDuty, AiConflictReport, AiSubstituteSuggestion } from '@/types';
+import { scanRosterHealth, generateAiSchedule, findEligibleSubstitutes } from './ai-scheduler';
+import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
+import {
+  broadcastPushNotification,
+  sendPushNotificationToUsers,
+  sendPushNotificationToRoles,
+} from './push-notifications';
 
 // Every mutating/sensitive action below re-derives the acting user from the
 // signed session -- never from a client-supplied id -- and checks their
@@ -68,16 +79,24 @@ async function requireAdmin(): Promise<User> {
 }
 
 export async function getAppData(weekStartDate?: string, selectedDate?: string) {
-  const users = await getAllUsers();
-  const instructors = await getInstructors();
-  const rosterWeek = await getOrCreateRosterWeek(weekStartDate);
-  const dutyAssignments = await getDutyAssignments(rosterWeek.id);
-  const nightShifts = await getNightShifts(rosterWeek.id);
-  const leaveRequests = await getAllLeaveRequests();
-  const catalog = await getCatalog();
-
   const todayStr = selectedDate || new Date().toISOString().split('T')[0];
-  const executiveReport = await getExecutiveStatus(todayStr);
+
+  // Fetch the baseline collections concurrently
+  const [users, rosterWeek, leaveRequests, catalog] = await Promise.all([
+    getAllUsers(),
+    getOrCreateRosterWeek(weekStartDate),
+    getAllLeaveRequests(),
+    getCachedCatalog(),
+  ]);
+
+  const instructors = await getInstructors(users);
+
+  // Parallelize dependent queries, reusing preloaded instructors in getExecutiveStatus
+  const [dutyAssignments, nightShifts, executiveReport] = await Promise.all([
+    getDutyAssignments(rosterWeek.id),
+    getNightShifts(rosterWeek.id),
+    getExecutiveStatus(todayStr, undefined, instructors),
+  ]);
 
   return {
     users,
@@ -176,13 +195,32 @@ export async function deleteDutyAction(assignmentId: string) {
 export async function setNightShiftAction(rosterWeekId: string, shiftDate: string, instructorId: string) {
   const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
   const res = await setNightShift(rosterWeekId, shiftDate, instructorId, undefined, actor.id);
+  if (res.success) {
+    sendPushNotificationToUsers([instructorId], {
+      title: '🌙 Night Duty Assignment',
+      body: `You have been scheduled for Night Duty on ${shiftDate}.`,
+      data: { type: 'NIGHT_DUTY', shiftDate },
+    }).catch((e) => console.error('[Push] Night shift alert error:', e));
+  }
   revalidatePath('/');
   return res;
+}
+
+export async function removeNightShiftAction(shiftDate: string) {
+  const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
+  const success = await removeNightShift(shiftDate, actor.id);
+  revalidatePath('/');
+  return { success };
 }
 
 export async function publishRosterAction(weekId: string) {
   const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
   const week = await publishRosterWeek(weekId, actor.id);
+  broadcastPushNotification({
+    title: '📅 Roster Published',
+    body: `The roster for ${week.startDate} to ${week.endDate} is now published.`,
+    data: { type: 'ROSTER_PUBLISHED', weekId },
+  }).catch((e) => console.error('[Push] Publish alert error:', e));
   revalidatePath('/');
   return { success: true, week };
 }
@@ -194,9 +232,14 @@ export async function cloneWeekAction(currentWeekStart: string) {
   return result;
 }
 
+// Every catalog mutation below also calls updateTag('catalog') to bust
+// getCachedCatalog()'s cache immediately (read-your-own-writes) -- otherwise
+// an edit here wouldn't show up anywhere else in the app until the cache's
+// 60s TTL expired.
 export async function addBatchAction(name: string) {
   const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
   const res = await addCatalogBatch(name, actor.id);
+  updateTag('catalog');
   revalidatePath('/');
   return res;
 }
@@ -204,6 +247,7 @@ export async function addBatchAction(name: string) {
 export async function removeBatchAction(name: string) {
   const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
   const res = await removeCatalogBatch(name, actor.id);
+  updateTag('catalog');
   revalidatePath('/');
   return res;
 }
@@ -211,6 +255,7 @@ export async function removeBatchAction(name: string) {
 export async function updateBatchAction(oldName: string, newName: string) {
   const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
   const res = await updateCatalogBatch(oldName, newName, actor.id);
+  updateTag('catalog');
   revalidatePath('/');
   return res;
 }
@@ -218,6 +263,7 @@ export async function updateBatchAction(oldName: string, newName: string) {
 export async function addRoomAction(name: string) {
   const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
   const res = await addCatalogRoom(name, actor.id);
+  updateTag('catalog');
   revalidatePath('/');
   return res;
 }
@@ -225,6 +271,7 @@ export async function addRoomAction(name: string) {
 export async function removeRoomAction(name: string) {
   const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
   const res = await removeCatalogRoom(name, actor.id);
+  updateTag('catalog');
   revalidatePath('/');
   return res;
 }
@@ -232,6 +279,7 @@ export async function removeRoomAction(name: string) {
 export async function updateRoomAction(oldName: string, newName: string) {
   const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
   const res = await updateCatalogRoom(oldName, newName, actor.id);
+  updateTag('catalog');
   revalidatePath('/');
   return res;
 }
@@ -239,6 +287,7 @@ export async function updateRoomAction(oldName: string, newName: string) {
 export async function addModuleAction(name: string) {
   const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
   const res = await addCatalogModule(name, actor.id);
+  updateTag('catalog');
   revalidatePath('/');
   return res;
 }
@@ -246,6 +295,7 @@ export async function addModuleAction(name: string) {
 export async function removeModuleAction(name: string) {
   const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
   const res = await removeCatalogModule(name, actor.id);
+  updateTag('catalog');
   revalidatePath('/');
   return res;
 }
@@ -253,6 +303,39 @@ export async function removeModuleAction(name: string) {
 export async function updateModuleAction(oldName: string, newName: string) {
   const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
   const res = await updateCatalogModule(oldName, newName, actor.id);
+  updateTag('catalog');
+  revalidatePath('/');
+  return res;
+}
+
+export async function addDutyTypeAction(name: string) {
+  const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
+  const res = await addCatalogDutyType(name, actor.id);
+  updateTag('catalog');
+  revalidatePath('/');
+  return res;
+}
+
+export async function removeDutyTypeAction(name: string) {
+  const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
+  const res = await removeCatalogDutyType(name, actor.id);
+  updateTag('catalog');
+  revalidatePath('/');
+  return res;
+}
+
+export async function updateDutyTypeAction(oldName: string, newName: string) {
+  const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
+  const res = await updateCatalogDutyType(oldName, newName, actor.id);
+  updateTag('catalog');
+  revalidatePath('/');
+  return res;
+}
+
+export async function updateAutoRefreshIntervalAction(seconds: number) {
+  const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
+  const res = await updateAutoRefreshInterval(seconds, actor.id);
+  updateTag('catalog');
   revalidatePath('/');
   return res;
 }
@@ -260,12 +343,27 @@ export async function updateModuleAction(oldName: string, newName: string) {
 // ----------------------------------------------------
 // Leave Requests
 // ----------------------------------------------------
-// Any signed-in user may submit a leave request. This intentionally does
-// NOT require instructorId === the caller: the shared "Instructors Portal"
-// kiosk account submits leave on behalf of whichever instructor is present.
-export async function submitLeaveAction(instructorId: string, startDate: string, endDate: string, reason: string) {
-  await requireAuth();
-  const leave = await createLeaveRequest(instructorId, startDate, endDate, reason);
+// Security Invariant: No user (not even an admin) can apply for leave on
+// someone else's behalf. The leave request is ALWAYS filed strictly for the
+// currently authenticated session caller.
+export async function submitLeaveAction(
+  arg1: string,
+  arg2: string,
+  arg3: string,
+  arg4?: string
+) {
+  const caller = await requireAuth();
+  // Support both (startDate, endDate, reason) and legacy (instructorId, startDate, endDate, reason)
+  const startDate = arg4 !== undefined ? arg2 : arg1;
+  const endDate = arg4 !== undefined ? arg3 : arg2;
+  const reason = arg4 !== undefined ? arg4 : arg3;
+
+  const leave = await createLeaveRequest(caller.id, startDate, endDate, reason);
+  sendPushNotificationToRoles(['ADMIN', 'EXECUTIVE'], {
+    title: '🌴 New Leave Request',
+    body: `${caller.fullName} submitted a leave request (${startDate} to ${endDate}).`,
+    data: { type: 'LEAVE_REQUEST', leaveId: leave.id },
+  }).catch((e) => console.error('[Push] Leave submit alert error:', e));
   revalidatePath('/');
   return { success: true, leave };
 }
@@ -273,6 +371,11 @@ export async function submitLeaveAction(instructorId: string, startDate: string,
 export async function reviewLeaveAction(leaveId: string, status: 'APPROVED' | 'REJECTED', comment?: string) {
   const actor = await requireRole('DEMONSTRATOR', 'EXECUTIVE', 'ADMIN');
   const updated = await reviewLeaveRequest(leaveId, status, actor.id, comment);
+  sendPushNotificationToUsers([updated.instructorId], {
+    title: status === 'APPROVED' ? '🌴 Leave Request Approved' : '❌ Leave Request Rejected',
+    body: `Your leave request for ${updated.startDate} to ${updated.endDate} was ${status.toLowerCase()} by ${actor.fullName}.`,
+    data: { type: 'LEAVE_REVIEW', leaveId: updated.id, status },
+  }).catch((e) => console.error('[Push] Leave review alert error:', e));
   revalidatePath('/');
   return { success: true, leave: updated };
 }
@@ -291,3 +394,148 @@ export async function getAuditLogsAction(filter?: AuditLogFilter) {
   await requireRole('EXECUTIVE', 'ADMIN');
   return getAuditLogs(filter);
 }
+
+// ----------------------------------------------------
+// AI Roster Co-Pilot Actions
+// ----------------------------------------------------
+
+export async function scanRosterHealthAction(rosterWeekId: string): Promise<AiConflictReport> {
+  await requireRole('DEMONSTRATOR', 'EXECUTIVE', 'ADMIN');
+  const [allInstructors, rosterWeek, dutyAssignments, nightShifts, leaveRequests] = await Promise.all([
+    getInstructors(),
+    getOrCreateRosterWeek(),
+    getDutyAssignments(rosterWeekId),
+    getNightShifts(rosterWeekId),
+    getAllLeaveRequests(),
+  ]);
+
+  return scanRosterHealth({
+    rosterWeek,
+    dutyAssignments,
+    nightShifts,
+    leaveRequests,
+    allInstructors,
+  });
+}
+
+export async function generateAiScheduleAction(
+  rosterWeekId: string,
+  prompt?: string,
+  targetDate?: string
+): Promise<{ success: boolean; proposed: AiProposedDuty[]; error?: string }> {
+  await requireRole('DEMONSTRATOR', 'EXECUTIVE', 'ADMIN');
+  try {
+    const [allInstructors, rosterWeek, dutyAssignments, nightShifts, leaveRequests, catalog] = await Promise.all([
+      getInstructors(),
+      getOrCreateRosterWeek(),
+      getDutyAssignments(rosterWeekId),
+      getNightShifts(rosterWeekId),
+      getAllLeaveRequests(),
+      getCachedCatalog(),
+    ]);
+
+    const proposed = await generateAiSchedule({
+      rosterWeek,
+      dutyAssignments,
+      nightShifts,
+      leaveRequests,
+      allInstructors,
+      catalog,
+      prompt,
+      targetDate,
+    });
+
+    return { success: true, proposed };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to generate schedule';
+    return { success: false, proposed: [], error: message };
+  }
+}
+
+export async function findAiSubstitutesAction(
+  dateStr: string,
+  startTime: string,
+  absentInstructorId: string,
+  rosterWeekId?: string
+): Promise<{ success: boolean; suggestions: AiSubstituteSuggestion[]; error?: string }> {
+  await requireAuth();
+  try {
+    const [allInstructors, week, leaveRequests] = await Promise.all([
+      getInstructors(),
+      getOrCreateRosterWeek(),
+      getAllLeaveRequests(),
+    ]);
+
+    const targetWeekId = rosterWeekId || week.id;
+    const [dutyAssignments, nightShifts] = await Promise.all([
+      getDutyAssignments(targetWeekId),
+      getNightShifts(targetWeekId),
+    ]);
+
+    const suggestions = findEligibleSubstitutes({
+      dateStr,
+      startTime,
+      absentInstructorId,
+      allInstructors,
+      dutyAssignments,
+      nightShifts,
+      leaveRequests,
+    });
+
+    return { success: true, suggestions };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to find substitutes';
+    return { success: false, suggestions: [], error: message };
+  }
+}
+
+export async function applyAiScheduleChangesAction(
+  rosterWeekId: string,
+  changes: AiProposedDuty[]
+): Promise<{ success: boolean; appliedCount: number; errors: string[] }> {
+  const actor = await requireRole('DEMONSTRATOR', 'EXECUTIVE', 'ADMIN');
+  const errors: string[] = [];
+  let appliedCount = 0;
+
+  for (const item of changes) {
+    try {
+      if (item.dutyType === 'Night Shift') {
+        const res = await setNightShift(rosterWeekId, item.dutyDate, item.instructorId, item.notes, actor.id);
+        if (res.success) {
+          appliedCount++;
+        } else if (res.error) {
+          errors.push(`${item.dutyDate} Night Duty: ${res.error}`);
+        }
+      } else {
+        const res = await addDutyAssignment(
+          {
+            rosterWeekId,
+            instructorId: item.instructorId,
+            dutyDate: item.dutyDate,
+            slotLabel: item.slotLabel,
+            startTime: item.startTime,
+            endTime: item.endTime,
+            dutyType: item.dutyType,
+            batchName: item.batchName,
+            moduleName: item.moduleName,
+            roomLab: item.roomLab,
+            notes: item.notes,
+          },
+          actor.id
+        );
+        if (res.success) {
+          appliedCount++;
+        } else if (res.error) {
+          errors.push(`${item.dutyDate} ${item.startTime}: ${res.error}`);
+        }
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      errors.push(`${item.dutyDate} ${item.startTime}: ${msg}`);
+    }
+  }
+
+  revalidatePath('/');
+  return { success: true, appliedCount, errors };
+}
+

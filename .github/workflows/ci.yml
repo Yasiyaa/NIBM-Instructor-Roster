@@ -52,6 +52,17 @@ jobs:
             echo "available=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # The test branch is a long-lived Neon branch, not recreated per run --
+      # apply any migrations added since it last ran before the domain suite
+      # touches it, or a schema change here (like DutyAssignment.dutyType)
+      # makes every query against it fail with P2022 "column does not exist".
+      - name: Apply pending migrations to test branch
+        if: steps.test_db.outputs.available == 'true'
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ secrets.TEST_DATABASE_URL }}
+          DATABASE_URL_UNPOOLED: ${{ secrets.TEST_DATABASE_URL_UNPOOLED }}
+
       # The domain suite (scripts/verify-domain-rules.ts) asserts against a
       # real Neon branch via TEST_DATABASE_URL/TEST_DATABASE_URL_UNPOOLED --
       # it has no mock mode, and `npm test`'s local --env-file=.env flag

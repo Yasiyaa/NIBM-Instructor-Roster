@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserById, getDutyAssignments, getNightShifts } from '@/lib/storage';
+import { mergeDutyAssignments } from '@/lib/roster-utils';
 import { DutyAssignment, NightShift, User } from '@/types';
 
 // Subscription feeds must always reflect the live roster, so this route
@@ -10,11 +11,8 @@ export const dynamic = 'force-dynamic';
 // can be converted to UTC with simple arithmetic (no VTIMEZONE needed).
 const COLOMBO_OFFSET_MS = 5.5 * 60 * 60 * 1000;
 
-// Night shifts only record a date, not hours, so campus overnight duty is
-// modelled as an 18:00 -> 06:00(+1) block.
-const NIGHT_SHIFT_START = '18:00';
-const NIGHT_SHIFT_END = '06:00';
-
+// Night shifts do not have a fixed time or hours allocated, so they are
+// exported as all-day date events (VALUE=DATE) spanning the duty date.
 function toICSDateUTC(dateStr: string, timeStr: string): string {
   const [year, month, day] = dateStr.split('-').map(Number);
   const [hour, minute] = timeStr.split(':').map(Number);
@@ -54,14 +52,15 @@ function foldLine(line: string): string {
 }
 
 function buildDutyEvent(a: DutyAssignment, dtstamp: string): string {
-  const description = `${a.slotLabel}\nNIBM Instructor Roster`;
+  const summary = a.batchName || a.moduleName ? `${a.batchName || ''} — ${a.moduleName || ''}` : a.dutyType;
+  const description = [a.slotLabel, a.notes, 'NIBM Instructor Roster'].filter(Boolean).join('\n');
   return [
     'BEGIN:VEVENT',
     foldLine(`UID:duty-${a.id}@nibm-instructor-roster`),
     `DTSTAMP:${dtstamp}`,
     `DTSTART:${toICSDateUTC(a.dutyDate, a.startTime)}`,
     `DTEND:${toICSDateUTC(a.dutyDate, a.endTime)}`,
-    foldLine(`SUMMARY:${escapeICSText(`${a.batchName} — ${a.moduleName}`)}`),
+    foldLine(`SUMMARY:${escapeICSText(summary)}`),
     ...(a.roomLab ? [foldLine(`LOCATION:${escapeICSText(a.roomLab)}`)] : []),
     foldLine(`DESCRIPTION:${escapeICSText(description)}`),
     'END:VEVENT',
@@ -69,22 +68,28 @@ function buildDutyEvent(a: DutyAssignment, dtstamp: string): string {
 }
 
 function buildNightShiftEvent(s: NightShift, dtstamp: string): string {
+  const dtStart = s.shiftDate.replace(/-/g, '');
+  const dtEnd = addDays(s.shiftDate, 1).replace(/-/g, '');
+
   return [
     'BEGIN:VEVENT',
     foldLine(`UID:night-${s.id}@nibm-instructor-roster`),
     `DTSTAMP:${dtstamp}`,
-    `DTSTART:${toICSDateUTC(s.shiftDate, NIGHT_SHIFT_START)}`,
-    `DTEND:${toICSDateUTC(addDays(s.shiftDate, 1), NIGHT_SHIFT_END)}`,
-    'SUMMARY:🌙 Night Duty (Overnight Stay)',
+    `DTSTART;VALUE=DATE:${dtStart}`,
+    `DTEND;VALUE=DATE:${dtEnd}`,
+    'SUMMARY:🌙 Night Duty',
     foldLine(`DESCRIPTION:${escapeICSText(s.notes || 'NIBM Night Duty / Caretaker Shift')}`),
+    'TRANSP:TRANSPARENT',
+    'X-MICROSOFT-CDO-ALLDAYEVENT:TRUE',
     'END:VEVENT',
   ].join('\r\n');
 }
 
 function buildICS(instructor: User, dutyAssignments: DutyAssignment[], nightShifts: NightShift[]): string {
   const dtstamp = toICSTimestampUTC(new Date());
+  const mergedDuties = mergeDutyAssignments(dutyAssignments);
   const events = [
-    ...dutyAssignments.map((a) => buildDutyEvent(a, dtstamp)),
+    ...mergedDuties.map((a) => buildDutyEvent(a, dtstamp)),
     ...nightShifts.map((s) => buildNightShiftEvent(s, dtstamp)),
   ];
 
@@ -96,6 +101,8 @@ function buildICS(instructor: User, dutyAssignments: DutyAssignment[], nightShif
     'METHOD:PUBLISH',
     foldLine(`X-WR-CALNAME:${escapeICSText(`${instructor.fullName} — NIBM Duty Roster`)}`),
     'X-WR-TIMEZONE:Asia/Colombo',
+    'REFRESH-INTERVAL;VALUE=DURATION:PT15M',
+    'X-PUBLISHED-TTL:PT15M',
     ...events,
     'END:VCALENDAR',
     '',
@@ -123,8 +130,10 @@ export async function GET(
     status: 200,
     headers: {
       'Content-Type': 'text/calendar; charset=utf-8',
-      'Content-Disposition': `attachment; filename="nibm-roster-${instructorId}.ics"`,
-      'Cache-Control': 'no-store',
+      'Content-Disposition': `inline; filename="nibm-roster-${instructorId}.ics"`,
+      'Cache-Control': 'no-cache, no-store, max-age=0, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0',
     },
   });
 }

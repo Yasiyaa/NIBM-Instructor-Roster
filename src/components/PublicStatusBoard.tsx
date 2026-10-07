@@ -40,6 +40,20 @@ export const PublicStatusBoard: React.FC<PublicStatusBoardProps> = ({
     }
   };
 
+  // Auto-refresh public board every 10s for lobby/wall-display monitoring
+  React.useEffect(() => {
+    const interval = setInterval(async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      try {
+        const updated = await getExecutiveReportAction(selectedDate, slotFilter);
+        setReport(updated);
+      } catch (err) {
+        console.error('Public board auto-refresh failed:', err);
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [selectedDate, slotFilter]);
+
   const dayOfWeek = new Date(selectedDate).toLocaleDateString('en-US', { weekday: 'long' });
   const formattedDate = new Date(selectedDate).toLocaleDateString('en-US', {
     month: 'long',
@@ -95,7 +109,7 @@ export const PublicStatusBoard: React.FC<PublicStatusBoardProps> = ({
                   type="date"
                   value={selectedDate}
                   onChange={(e) => handleFilterChange(e.target.value, slotFilter)}
-                  className="bg-slate-900 text-xs text-slate-300 border border-slate-700 rounded-lg px-2 py-1 focus:outline-none cursor-pointer"
+                  className="bg-slate-900 text-xs text-slate-300 border border-slate-700 rounded-lg px-2 py-1 focus:outline-none cursor-pointer [color-scheme:dark]"
                 />
               </div>
             </div>
@@ -207,19 +221,26 @@ export const PublicStatusBoard: React.FC<PublicStatusBoardProps> = ({
                         )}
                       </div>
                       <span className="text-[11px] font-bold text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/60">
-                        {assignment.startTime} - {assignment.endTime}
+                        {assignment.startTime === '09:00' && assignment.endTime === '16:00'
+                          ? '09:00 - 16:00 (Full Day)'
+                          : `${assignment.startTime} - ${assignment.endTime}`}
                       </span>
                     </div>
 
                     <div className="text-xs text-slate-300 font-medium flex items-center space-x-1.5 mt-1">
                       <BookOpen className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                      <span>{assignment.moduleName}</span>
+                      <span>{assignment.moduleName ?? assignment.dutyType}</span>
                     </div>
+                    {assignment.notes && (
+                      <p className="text-xs text-slate-400 italic mt-1">{assignment.notes}</p>
+                    )}
 
                     <div className="flex items-center justify-between text-xs text-slate-400 mt-2.5 pt-2 border-t border-slate-800">
-                      <span className="text-[11px] font-bold text-indigo-300 bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-800/40">
-                        Batch: {assignment.batchName}
-                      </span>
+                      {assignment.batchName && (
+                        <span className="text-[11px] font-bold text-indigo-300 bg-indigo-950/60 px-2 py-0.5 rounded border border-indigo-800/40">
+                          Batch: {assignment.batchName}
+                        </span>
+                      )}
                       {assignment.roomLab && (
                         <span className="flex items-center space-x-1 text-slate-400 text-[11px]">
                           <MapPin className="w-3 h-3 text-slate-500" />

@@ -21,7 +21,7 @@ export default function Icon() {
           borderRadius: 16,
         }}
       >
-        <div style={{ fontSize: 38, fontWeight: 700, color: 'white', fontFamily: 'Arial, Helvetica, sans-serif', lineHeight: 1 }}>N</div>
+        <div style={{ fontSize: 38, fontWeight: 700, color: 'white', fontFamily: 'Arial, Helvetica, sans-serif', lineHeight: 1 }}>S</div>
         <div style={{ marginTop: 6, width: 24, height: 3.5, borderRadius: 2, background: 'rgba(255,255,255,0.55)' }} />
       </div>
     ),

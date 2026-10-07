@@ -1,20 +1,23 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Lock, User as UserIcon, ArrowRight, Eye, AlertCircle } from 'lucide-react';
+import { Lock, User as UserIcon, ArrowRight, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { loginAction } from '@/lib/actions';
 import { AppLogo } from './AppLogo';
 
 interface LoginPageProps {
   onLoginSuccess: () => void;
   onOpenPublicBoard: () => void;
+  isRefreshing?: boolean;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenPublicBoard }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenPublicBoard, isRefreshing }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const busy = submitting || !!isRefreshing;
 
   const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,13 +25,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenPubl
     setSubmitting(true);
 
     const res = await loginAction(username, password);
-    setSubmitting(false);
 
     if (!res.success) {
+      setSubmitting(false);
       setError(res.error);
       return;
     }
+    // Kick off the session refresh; `isRefreshing` (from the parent's
+    // useTransition) takes over keeping the button disabled/labelled until
+    // the refetch finishes and this page unmounts, so we never flip back to
+    // an idle-looking "Sign In" while the DB round-trip is still in flight.
     onLoginSuccess();
+    setSubmitting(false);
   };
 
   return (
@@ -110,22 +118,31 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess, onOpenPubl
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-600 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full text-sm bg-slate-950 border border-slate-700 text-white rounded-lg pl-9 pr-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-600"
+                  className="w-full text-sm bg-slate-950 border border-slate-700 text-white rounded-lg pl-9 pr-9 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-600"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  tabIndex={-1}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
             <button
               type="submit"
-              disabled={submitting}
-              className="w-full flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium text-sm py-2.5 px-4 rounded-lg transition-colors cursor-pointer"
+              disabled={busy}
+              className="w-full flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm py-2.5 px-4 rounded-lg transition-colors cursor-pointer"
             >
-              <span>{submitting ? 'Signing In...' : 'Sign In'}</span>
+              <span>{busy ? 'Signing In...' : 'Sign In'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>

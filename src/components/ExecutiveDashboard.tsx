@@ -24,9 +24,12 @@ import {
   Phone,
   ScrollText,
   Filter,
+  Sparkles,
 } from 'lucide-react';
 import { reviewLeaveAction, getExecutiveReportAction, getAuditLogsAction } from '@/lib/actions';
 import { WeeklyScheduleView } from '@/components/WeeklyScheduleView';
+import { AiCopilotDrawer } from './AiCopilotDrawer';
+import { formatApplicationDateTime } from '@/lib/roster-utils';
 
 const AUDIT_ACTION_LABELS: Record<string, string> = {
   DUTY_ASSIGNED: 'Duty Assigned',
@@ -84,6 +87,27 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
   const [slotFilter, setSlotFilter] = useState<string>('ALL');
   const [report, setReport] = useState<ExecutiveStatusReport>(initialReport);
   const [reviewingId, setReviewingId] = useState<string | null>(null);
+
+  // AI Co-Pilot Drawer State
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (
+        e.target instanceof HTMLInputElement ||
+        e.target instanceof HTMLTextAreaElement ||
+        (e.target as HTMLElement)?.isContentEditable
+      ) {
+        return;
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setAiDrawerOpen((prev) => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // ---- Governance / Audit Trail Drawer ----
   const [auditDrawerOpen, setAuditDrawerOpen] = useState(false);
@@ -195,6 +219,18 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
+          {rosterWeek && (currentUser.role === 'EXECUTIVE' || currentUser.role === 'ADMIN' || currentUser.role === 'DEMONSTRATOR') && (
+            <button
+              onClick={() => setAiDrawerOpen(true)}
+              className="flex items-center space-x-1.5 text-xs font-bold px-3.5 py-2 rounded-lg shadow-md transition-all bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:via-indigo-500 hover:to-blue-500 text-white cursor-pointer active:scale-95 border border-purple-400/40 shadow-purple-900/30 print:hidden"
+              title="AI Roster Co-Pilot & Radar (Ctrl+K / ⌘K)"
+            >
+              <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+              <span>AI Co-Pilot</span>
+              <span className="hidden sm:inline-block ml-1 text-[10px] bg-white/20 px-1.5 py-0.5 rounded font-mono">⌘K</span>
+            </button>
+          )}
+
           {(currentUser.role === 'EXECUTIVE' || currentUser.role === 'ADMIN') && (
             <button
               onClick={() => setAuditDrawerOpen(true)}
@@ -246,7 +282,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                 type="date"
                 value={selectedDate}
                 onChange={(e) => handleFilterChange(e.target.value, slotFilter)}
-                className="bg-transparent text-white text-sm font-semibold focus:outline-none cursor-pointer"
+                className="bg-transparent text-white text-sm font-semibold focus:outline-none cursor-pointer [color-scheme:dark]"
               />
             </div>
             <button
@@ -254,7 +290,7 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                 const today = new Date().toISOString().split('T')[0];
                 handleFilterChange(today, slotFilter);
               }}
-              className="text-xs bg-blue-600 hover:bg-blue-500 text-white font-medium px-2.5 py-1.5 rounded-lg transition-colors ml-1"
+              className="text-xs bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1.5 rounded-lg transition-colors ml-1 cursor-pointer shadow-xs active:scale-95"
             >
               Today
             </button>
@@ -273,10 +309,10 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
             <button
               key={pill.id}
               onClick={() => handleFilterChange(selectedDate, pill.id)}
-              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-all ${
+              className={`text-xs px-3 py-1.5 rounded-lg font-semibold transition-all cursor-pointer ${
                 slotFilter === pill.id
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700/80 border border-slate-700/60'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 border border-slate-700/80'
               }`}
             >
               {pill.label}
@@ -420,19 +456,24 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                       )}
                     </div>
                     <span className="text-[11px] font-semibold text-emerald-400 bg-emerald-500/15 px-2 py-0.5 rounded">
-                      {assignment.startTime} - {assignment.endTime}
+                      {assignment.startTime === '09:00' && assignment.endTime === '16:00'
+                        ? '09:00 - 16:00 (Full Day)'
+                        : `${assignment.startTime} - ${assignment.endTime}`}
                     </span>
                   </div>
 
                   <div className="space-y-1 text-xs text-slate-400">
                     <div className="flex items-center space-x-1.5 font-medium text-slate-200">
                       <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
-                      <span>{assignment.moduleName}</span>
+                      <span>{assignment.moduleName ?? assignment.dutyType}</span>
                     </div>
+                    {assignment.notes && <p className="italic">{assignment.notes}</p>}
                     <div className="flex items-center justify-between text-slate-500 pt-1">
-                      <span className="bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded font-semibold text-[11px]">
-                        Batch: {assignment.batchName}
-                      </span>
+                      {assignment.batchName && (
+                        <span className="bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded font-semibold text-[11px]">
+                          Batch: {assignment.batchName}
+                        </span>
+                      )}
                       {assignment.roomLab && (
                         <span className="flex items-center space-x-1 text-slate-500 text-[11px]">
                           <MapPin className="w-3 h-3 text-slate-400" />
@@ -591,6 +632,10 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                       {leave.startDate} {leave.startDate !== leave.endDate && `→ ${leave.endDate}`}
                     </span>
                   </div>
+                  <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
+                    <Clock className="w-3 h-3 text-amber-400 shrink-0" />
+                    <span>Applied: <strong className="text-slate-300 font-medium">{formatApplicationDateTime(leave.appliedAt || leave.createdAt)}</strong></span>
+                  </div>
                   <p className="text-xs text-slate-400 mt-2 bg-slate-800/60 p-2 rounded border border-slate-800">
                     <strong>Reason:</strong> {leave.reason}
                   </p>
@@ -735,6 +780,20 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* AI Roster Co-Pilot Drawer */}
+      {rosterWeek && (
+        <AiCopilotDrawer
+          isOpen={aiDrawerOpen}
+          onClose={() => setAiDrawerOpen(false)}
+          rosterWeek={rosterWeek}
+          dutyAssignments={dutyAssignments || []}
+          nightShifts={nightShifts || []}
+          leaveRequests={leaveRequests || []}
+          allInstructors={allInstructors}
+          onRefresh={onRefresh}
+        />
       )}
     </div>
   );

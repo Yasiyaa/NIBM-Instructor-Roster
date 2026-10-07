@@ -11,6 +11,7 @@ import { Role } from '@prisma/client';
 
 const CADRE: Array<{ fullName: string; username: string; role: Role; jobTitle?: string }> = [
   { fullName: 'Yasith', username: 'yasith', role: 'DEMONSTRATOR' },
+  { fullName: 'Sandali', username: 'sandali', role: 'DEMONSTRATOR' },
   { fullName: 'Dr. Thisara', username: 'thisara', role: 'EXECUTIVE' },
   {
     fullName: 'Instructors Portal (General Access)',
@@ -21,7 +22,7 @@ const CADRE: Array<{ fullName: string; username: string; role: Role; jobTitle?: 
   { fullName: 'Nithara', username: 'nithara', role: 'INSTRUCTOR' },
   { fullName: 'Nipun', username: 'nipun', role: 'INSTRUCTOR' },
   { fullName: 'Gimasha', username: 'gimasha', role: 'INSTRUCTOR' },
-  { fullName: 'Kithnuka', username: 'kithnuka', role: 'INSTRUCTOR' },
+  { fullName: 'Kithnuka', username: 'kithnuka', role: 'DEMONSTRATOR' },
   { fullName: 'Binal', username: 'binal', role: 'INSTRUCTOR' },
   { fullName: 'Poorna', username: 'poorna', role: 'INSTRUCTOR' },
   { fullName: 'Supun', username: 'supun', role: 'INSTRUCTOR', jobTitle: 'Technical Assistant' },

@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo } from 'react';
 import { User, RosterWeek, DutyAssignment, NightShift, LeaveRequest } from '@/types';
+import { isSameSession } from '@/lib/roster-utils';
 import {
   Calendar,
   Clock,
@@ -20,7 +21,223 @@ import {
   Sparkles,
   ExternalLink,
   Phone,
+  X,
+  FileText,
+  Info,
 } from 'lucide-react';
+
+interface SessionCardProps {
+  duty: DutyAssignment;
+  slotType: 'morning' | 'afternoon' | 'sunday';
+  isFullDay: boolean;
+  allInstructors: User[];
+}
+
+const SessionCard: React.FC<SessionCardProps> = ({
+  duty,
+  slotType,
+  isFullDay,
+  allInstructors,
+}) => {
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const instructor = allInstructors.find((i) => i.id === duty.instructorId);
+
+  const colorStyles = {
+    morning: {
+      card: 'bg-blue-500/10 print:bg-blue-50/80 border-blue-500/20 print:border-blue-300',
+      title: 'text-blue-300 print:text-blue-950',
+      batch: 'bg-blue-500/25 print:bg-blue-200 text-blue-400 print:text-blue-900',
+      avatarBg: 'bg-blue-600 print:bg-blue-700',
+      badgeBorder: 'border-blue-100/20 print:border-blue-200',
+      fullDayBadge:
+        'text-blue-300 print:text-indigo-950 bg-blue-500/20 print:bg-indigo-100 border-blue-500/30 print:border-indigo-300',
+    },
+    afternoon: {
+      card: 'bg-amber-500/10 print:bg-amber-50/80 border-amber-500/20 print:border-amber-300',
+      title: 'text-amber-300 print:text-amber-950',
+      batch: 'bg-amber-500/25 print:bg-amber-200 text-amber-400 print:text-amber-900',
+      avatarBg: 'bg-amber-600 print:bg-amber-700',
+      badgeBorder: 'border-amber-100/20 print:border-amber-200',
+      fullDayBadge:
+        'text-amber-300 print:text-amber-950 bg-amber-500/20 print:bg-amber-100 border-amber-500/30 print:border-amber-300',
+    },
+    sunday: {
+      card: 'bg-purple-500/15 print:bg-purple-50/80 border-purple-500/20 print:border-purple-300',
+      title: 'text-purple-300 print:text-purple-950',
+      batch: 'bg-purple-500/25 print:bg-purple-200 text-purple-400 print:text-purple-900',
+      avatarBg: 'bg-purple-700 print:bg-purple-800',
+      badgeBorder: 'border-purple-500/20 print:border-purple-200',
+      fullDayBadge:
+        'text-purple-300 print:text-purple-950 bg-purple-500/20 print:bg-purple-100 border-purple-500/30 print:border-purple-300',
+    },
+  }[slotType];
+
+  return (
+    <div
+      className={`relative rounded-lg print:rounded p-2 print:p-1 border transition-all shadow-2xs hover:shadow-xs print:shadow-none print-avoid-break group ${colorStyles.card}`}
+      onMouseEnter={() => setPopoverOpen(true)}
+      onMouseLeave={() => setPopoverOpen(false)}
+    >
+      {/* Session Title / Module */}
+      <div className={`text-xs print:text-[9.5px] font-bold line-clamp-2 leading-snug ${colorStyles.title}`}>
+        {duty.moduleName ?? duty.dutyType}
+      </div>
+
+      {/* Batch & Room */}
+      <div className="mt-1 print:mt-0.5 flex items-center justify-between text-[11px] print:text-[8.5px]">
+        {duty.batchName && (
+          <span className={`font-bold px-1.5 py-0.2 rounded text-[10px] print:text-[8px] ${colorStyles.batch}`}>
+            {duty.batchName}
+          </span>
+        )}
+        {duty.roomLab && (
+          <span className="text-slate-400 print:text-slate-600 font-medium text-[10px] print:text-[8.5px] flex items-center gap-0.5">
+            <MapPin className="w-2.5 h-2.5 text-slate-400 print:text-slate-600" />
+            {duty.roomLab}
+          </span>
+        )}
+      </div>
+
+      {/* Full Day Indicator */}
+      {isFullDay && (
+        <div
+          className={`mt-1.5 print:mt-0.5 inline-flex items-center gap-1 text-[10px] print:text-[8px] font-bold px-1.5 py-0.5 print:py-0.2 rounded border shadow-2xs ${colorStyles.fullDayBadge}`}
+        >
+          <Clock className="w-2.5 h-2.5 shrink-0" />
+          <span>09:00 - 16:00 (Full Day)</span>
+        </div>
+      )}
+
+      {/* Interactive Compact Note Pill on Screen */}
+      {duty.notes && (
+        <div className="mt-1 print:hidden">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setPopoverOpen((prev) => !prev);
+            }}
+            className="inline-flex items-center gap-1 text-[9.5px] text-slate-300 hover:text-white bg-slate-800/90 hover:bg-slate-700/90 px-1.5 py-0.5 rounded border border-slate-700/80 transition-colors cursor-pointer max-w-full"
+            title="Click to view full session notes"
+          >
+            <FileText className="w-2.5 h-2.5 text-blue-400 shrink-0" />
+            <span className="truncate max-w-[130px]">{duty.notes}</span>
+          </button>
+        </div>
+      )}
+
+      {/* Printed Notes (Preserved on Paper) */}
+      {duty.notes && (
+        <div className="hidden print:block mt-0.5 text-[8px] text-slate-600 italic line-clamp-2">
+          {duty.notes}
+        </div>
+      )}
+
+      {/* Instructor Footer */}
+      <div
+        className={`mt-1.5 print:mt-0.5 pt-1 border-t flex items-center justify-between text-[11px] print:text-[8.5px] font-semibold text-slate-200 print:text-slate-800 ${colorStyles.badgeBorder}`}
+      >
+        <div className="flex items-center space-x-1 min-w-0">
+          <div
+            className={`w-4 h-4 print:w-3.5 print:h-3.5 rounded-full text-white font-bold flex items-center justify-center text-[9px] print:text-[7.5px] shrink-0 ${colorStyles.avatarBg}`}
+          >
+            {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
+          </div>
+          <span className="truncate">{duty.instructorName}</span>
+        </div>
+
+        {/* Info button on mobile for quick tap popover */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            setPopoverOpen((prev) => !prev);
+          }}
+          className="lg:hidden text-slate-400 hover:text-slate-200 p-0.5 rounded cursor-pointer"
+          title="Session details"
+        >
+          <Info className="w-3 h-3 text-slate-400" />
+        </button>
+      </div>
+
+      {/* Interactive Floating Popover Card */}
+      {popoverOpen && (
+        <div
+          className={`absolute z-40 left-0 right-0 sm:left-1/2 sm:-translate-x-1/2 ${
+            slotType === 'morning' ? 'top-full mt-2' : 'bottom-full mb-2'
+          } w-72 max-w-[85vw] p-3 rounded-xl bg-slate-950 text-slate-100 border border-slate-700 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in-95 duration-150 print:hidden`}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex items-start justify-between gap-2 pb-2 border-b border-slate-800">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-blue-400">
+                {isFullDay ? 'Full-Day Session (09:00 - 16:00)' : `${duty.startTime} - ${duty.endTime}`}
+              </div>
+              <div className="text-xs font-bold text-white mt-0.5 leading-snug">
+                {duty.moduleName ?? duty.dutyType}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setPopoverOpen(false)}
+              className="text-slate-400 hover:text-white p-1 rounded-md cursor-pointer transition-colors"
+              title="Close details"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          <div className="mt-2 space-y-1.5 text-[11px]">
+            {duty.batchName && (
+              <div className="flex items-center justify-between text-slate-300">
+                <span className="text-slate-400">Target Batch:</span>
+                <span className="font-bold text-white bg-slate-800 px-1.5 py-0.2 rounded border border-slate-700">
+                  {duty.batchName}
+                </span>
+              </div>
+            )}
+            {duty.roomLab && (
+              <div className="flex items-center justify-between text-slate-300">
+                <span className="text-slate-400">Room / Facility:</span>
+                <span className="font-bold text-slate-200 flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-blue-400" />
+                  {duty.roomLab}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center justify-between text-slate-300 pt-1 border-t border-slate-800/80">
+              <span className="text-slate-400">Assigned Instructor:</span>
+              <span className="font-bold text-white">{duty.instructorName}</span>
+            </div>
+            {instructor?.phone && (
+              <div className="flex items-center justify-between text-slate-300">
+                <span className="text-slate-400">Contact:</span>
+                <a
+                  href={`tel:${instructor.phone.replace(/\s+/g, '')}`}
+                  className="inline-flex items-center gap-1 text-emerald-400 hover:text-emerald-300 font-bold hover:underline"
+                >
+                  <Phone className="w-2.5 h-2.5" />
+                  <span>{instructor.phone}</span>
+                </a>
+              </div>
+            )}
+            {duty.notes && (
+              <div className="mt-2 pt-2 border-t border-slate-800">
+                <div className="text-[10px] uppercase font-bold text-slate-400 flex items-center gap-1 mb-1">
+                  <FileText className="w-3 h-3 text-blue-400" />
+                  <span>Session Notes & Instructions</span>
+                </div>
+                <div className="bg-slate-900 p-2 rounded-lg border border-slate-800 text-[11px] text-slate-200 whitespace-pre-wrap leading-relaxed">
+                  {duty.notes}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
 
 interface WeeklyScheduleViewProps {
   rosterWeek: RosterWeek;
@@ -45,6 +262,12 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
   const [prevRosterStartDate, setPrevRosterStartDate] = useState<string>(rosterWeek.startDate);
   const [selectedInstructorId, setSelectedInstructorId] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [mobileSelectedDay, setMobileSelectedDay] = useState<string>('ALL');
+
+  const selectedInstructor = useMemo(() => {
+    if (selectedInstructorId === 'ALL') return null;
+    return allInstructors.find((i) => i.id === selectedInstructorId) || null;
+  }, [selectedInstructorId, allInstructors]);
 
   if (rosterWeek.startDate !== prevRosterStartDate) {
     setPrevRosterStartDate(rosterWeek.startDate);
@@ -228,36 +451,38 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Top Banner & Week Controller */}
-      <div className="bg-slate-900 rounded-2xl p-6 text-white border border-slate-800 print:hidden">
+    <div className="space-y-6 print:space-y-3">
+      {/* Top Banner: Week Horizon Controller */}
+      <div className="bg-slate-900 rounded-2xl p-5 sm:p-6 text-white border border-slate-800 shadow-sm print:hidden">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center space-x-2 text-blue-400 text-sm font-medium mb-1">
+            <div className="flex items-center space-x-2 text-blue-400 text-xs sm:text-sm font-semibold mb-1">
               <Shield className="w-4 h-4" />
               <span>Executive Weekly Overview</span>
             </div>
-            <h2 className="text-2xl font-black tracking-tight text-white flex items-center gap-2">
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white flex items-center gap-2">
               <span>Full-Week Master Schedule</span>
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30">
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 border border-blue-400/30">
                 7-Day Matrix
               </span>
             </h2>
           </div>
 
           {/* Roster Publication Status & Actions */}
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="bg-slate-800/80 px-3.5 py-2 rounded-xl border border-slate-700 flex items-center space-x-2.5">
+          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
+            <div className="bg-slate-800/90 px-3 py-2 rounded-xl border border-slate-700/80 flex items-center space-x-2.5">
               <span
                 className={`w-2.5 h-2.5 rounded-full ${
-                  rosterWeek.status === 'PUBLISHED' ? 'bg-emerald-400 shadow-sm shadow-emerald-400/50' : 'bg-amber-400 animate-pulse'
+                  rosterWeek.status === 'PUBLISHED'
+                    ? 'bg-emerald-400 shadow-xs shadow-emerald-400/50'
+                    : 'bg-amber-400 animate-pulse'
                 }`}
               ></span>
               <div className="text-left">
-                <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">
+                <div className="text-[9px] uppercase font-bold text-slate-400 tracking-wider">
                   Roster State
                 </div>
-                <div className="text-xs font-black text-white">
+                <div className="text-xs font-black">
                   {rosterWeek.status === 'PUBLISHED' ? (
                     <span className="text-emerald-400">PUBLISHED</span>
                   ) : (
@@ -269,8 +494,8 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
 
             <button
               onClick={handlePrint}
-              className="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-3.5 py-2.5 rounded-xl border border-slate-700 text-xs font-semibold transition-all cursor-pointer shadow-sm"
-              title="Print Weekly Timetable"
+              className="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white px-3.5 py-2.5 rounded-xl border border-slate-700 text-xs font-semibold transition-all cursor-pointer shadow-xs active:scale-95"
+              title="Print Weekly Timetable in Landscape Format"
             >
               <Printer className="w-4 h-4 text-blue-400" />
               <span>Print Timetable</span>
@@ -278,103 +503,215 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
           </div>
         </div>
 
-        {/* Dynamic Week Navigation Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mt-6 pt-4 border-t border-slate-800/80">
-          <div className="flex flex-wrap items-center gap-2">
+        {/* Unified Horizon & Navigation Segmented Controls */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-5 pt-4 border-t border-slate-800/80">
+          <div className="inline-flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700/70 overflow-x-auto max-w-full">
             <button
               onClick={() => handleShiftDate(-7)}
-              className="flex items-center space-x-1 text-xs bg-slate-800/90 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors cursor-pointer"
+              className="flex items-center space-x-1 text-xs text-slate-300 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-slate-700/70 transition-colors cursor-pointer whitespace-nowrap"
+              title="Shift backward 7 days"
             >
               <ChevronLeft className="w-3.5 h-3.5" />
-              <span>Prev 7 Days</span>
+              <span className="hidden sm:inline">Prev 7 Days</span>
+              <span className="sm:hidden">Prev</span>
             </button>
             <button
               onClick={() => handleDateChange(todayStr)}
-              className="text-xs bg-slate-800/90 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors cursor-pointer"
+              className="text-xs text-slate-300 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-slate-700/70 transition-colors cursor-pointer whitespace-nowrap font-medium"
+              title="Jump to current week"
             >
               Current Week
             </button>
             <button
               onClick={handleJumpToSunday}
-              className="text-xs bg-indigo-600/60 hover:bg-indigo-600 text-white px-3 py-1.5 rounded-lg border border-indigo-500/50 transition-colors cursor-pointer"
+              className="text-xs text-indigo-300 bg-indigo-950/60 hover:bg-indigo-900/80 border border-indigo-700/50 px-2.5 py-1.5 rounded-lg transition-colors cursor-pointer whitespace-nowrap font-bold"
+              title="Align window starting on Sunday"
             >
               Start on Sunday
             </button>
             <button
               onClick={() => handleShiftDate(7)}
-              className="flex items-center space-x-1 text-xs bg-slate-800/90 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors cursor-pointer"
+              className="flex items-center space-x-1 text-xs text-slate-300 hover:text-white px-2.5 py-1.5 rounded-lg hover:bg-slate-700/70 transition-colors cursor-pointer whitespace-nowrap"
+              title="Shift forward 7 days"
             >
-              <span>Next 7 Days</span>
+              <span className="hidden sm:inline">Next 7 Days</span>
+              <span className="sm:hidden">Next</span>
               <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-slate-700">
-            <Calendar className="w-4 h-4 text-blue-400" />
-            <span className="text-xs text-slate-400 font-medium">Week Starting:</span>
+          {/* Date Picker Range Display */}
+          <div className="flex items-center gap-2 bg-slate-800/90 px-3 py-1.5 rounded-xl border border-slate-700/80">
+            <Calendar className="w-4 h-4 text-blue-400 shrink-0" />
+            <span className="text-xs text-slate-400 font-medium whitespace-nowrap">Week Starting:</span>
             <input
               type="date"
               value={planningStartDate}
               onChange={(e) => handleDateChange(e.target.value)}
-              className="bg-transparent text-white text-xs font-bold focus:outline-none cursor-pointer"
+              className="bg-transparent text-white text-xs font-bold focus:outline-none cursor-pointer [color-scheme:dark]"
             />
-            <span className="text-xs text-slate-400 font-normal">
+            <span className="text-xs text-slate-400 font-normal whitespace-nowrap hidden sm:inline">
               → {weekEndDate}
             </span>
           </div>
         </div>
+      </div>
 
-        {/* Filter & Search Bar */}
-        <div className="flex flex-col sm:flex-row items-center gap-3 mt-4 pt-4 border-t border-slate-800/60">
-          <div className="flex items-center gap-2 w-full sm:w-auto">
-            <Filter className="w-3.5 h-3.5 text-blue-400" />
-            <span className="text-xs text-slate-400 font-medium">Filter Cadre:</span>
-            <select
-              value={selectedInstructorId}
-              onChange={(e) => setSelectedInstructorId(e.target.value)}
-              className="bg-slate-800/90 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-blue-500 cursor-pointer"
-            >
-              <option value="ALL">All 8 Instructors (Full Cadre)</option>
-              {allInstructors.map((inst) => (
-                <option key={inst.id} value={inst.id}>
-                  {inst.fullName}
+      {/* Dedicated Filter & Search Control Center */}
+      <div className="bg-slate-900/90 backdrop-blur-md rounded-2xl p-4 border border-slate-800 shadow-sm print:hidden space-y-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          {/* Left: Instructor Cadre Dropdown */}
+          <div className="flex items-center gap-2 min-w-0 sm:w-auto">
+            <div className="flex items-center gap-1.5 bg-slate-800/90 px-3 py-1.5 rounded-xl border border-slate-700/80 w-full sm:w-auto">
+              <Filter className="w-3.5 h-3.5 text-blue-400 shrink-0" />
+              <span className="text-xs text-slate-400 font-medium whitespace-nowrap">Cadre:</span>
+              <select
+                value={selectedInstructorId}
+                onChange={(e) => setSelectedInstructorId(e.target.value)}
+                className="bg-transparent text-slate-200 text-xs font-semibold focus:outline-none cursor-pointer w-full sm:w-auto pr-2"
+              >
+                <option value="ALL" className="bg-slate-900 text-slate-200">
+                  All {allInstructors.length} Instructors (Full Cadre)
                 </option>
-              ))}
-            </select>
+                {allInstructors.map((inst) => (
+                  <option key={inst.id} value={inst.id} className="bg-slate-900 text-slate-200">
+                    {inst.fullName}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div className="relative flex-1 w-full sm:w-auto">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-2.5 text-slate-400" />
+          {/* Right: Search Box with Clear Button */}
+          <div className="relative flex-1 sm:max-w-md">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
             <input
               type="text"
-              placeholder="Search module, batch (e.g. DSE 24.1), or lab..."
+              placeholder="Search module, batch (e.g. DSE 24.1), room, or instructor..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-800/80 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-500"
+              className="w-full bg-slate-800/90 border border-slate-700/80 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 rounded transition-colors cursor-pointer"
+                title="Clear search"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
           </div>
+        </div>
 
-          {(selectedInstructorId !== 'ALL' || searchQuery) && (
+        {/* Active Filter Chips & Match Count */}
+        {(selectedInstructorId !== 'ALL' || searchQuery.trim() !== '') && (
+          <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/60">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] text-slate-400 font-medium">Active filters:</span>
+              {selectedInstructorId !== 'ALL' && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/40 px-2.5 py-0.5 rounded-full">
+                  <span>Instructor: {selectedInstructor?.fullName}</span>
+                  <button
+                    onClick={() => setSelectedInstructorId('ALL')}
+                    className="hover:text-white transition-colors cursor-pointer"
+                    title="Remove instructor filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {searchQuery.trim() !== '' && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] font-bold bg-slate-800 text-slate-200 border border-slate-700 px-2.5 py-0.5 rounded-full">
+                  <span>Query: &quot;{searchQuery}&quot;</span>
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="hover:text-white transition-colors cursor-pointer"
+                    title="Clear search filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              <button
+                onClick={() => {
+                  setSelectedInstructorId('ALL');
+                  setSearchQuery('');
+                }}
+                className="text-[11px] text-rose-400 hover:text-rose-300 hover:underline font-semibold ml-1 cursor-pointer"
+              >
+                Reset All Filters
+              </button>
+            </div>
+
+            <div className="text-[11px] text-slate-400 font-medium">
+              Showing <span className="font-bold text-slate-200">{filteredAssignments.length}</span> lectures
+            </div>
+          </div>
+        )}
+
+        {/* Mobile Horizontal Day Switcher (Visible only on < lg screens) */}
+        <div className="block lg:hidden pt-2 border-t border-slate-800/60">
+          <div className="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-1.5">
+            Focus Day (Mobile Quick Jump):
+          </div>
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
             <button
-              onClick={() => {
-                setSelectedInstructorId('ALL');
-                setSearchQuery('');
-              }}
-              className="text-xs text-blue-400 hover:text-blue-300 underline font-medium cursor-pointer"
+              onClick={() => setMobileSelectedDay('ALL')}
+              className={`text-xs px-2.5 py-1 rounded-lg font-bold whitespace-nowrap transition-all cursor-pointer ${
+                mobileSelectedDay === 'ALL'
+                  ? 'bg-blue-600 text-white shadow-xs'
+                  : 'bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60'
+              }`}
             >
-              Reset Filters
+              All 7 Days
             </button>
-          )}
+            {weekDays.map((day) => {
+              const isSelected = mobileSelectedDay === day.dateStr;
+              return (
+                <button
+                  key={day.dateStr}
+                  onClick={() => setMobileSelectedDay(day.dateStr)}
+                  className={`text-xs px-2.5 py-1 rounded-lg font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    isSelected
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : day.isToday
+                      ? 'bg-blue-950/80 text-blue-300 border border-blue-700/70'
+                      : day.isSunday
+                      ? 'bg-purple-950/60 text-purple-300 border border-purple-800/60'
+                      : 'bg-slate-800 text-slate-400 hover:text-slate-200 border border-slate-700/60'
+                  }`}
+                >
+                  {day.dayName} {day.formattedDate.split(' ')[1]}
+                  {day.isToday && ' • Today'}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
       {/* Printable Header (Visible only when printing) */}
-      <div className="hidden print:block mb-4 p-4 border-b border-slate-700">
-        <h1 className="text-xl font-black text-slate-100">National Institute of Business Management (NIBM)</h1>
-        <h2 className="text-base font-bold text-slate-300">School of Computing — Instructor Duty Roster</h2>
-        <p className="text-xs text-slate-400">
-          Week: {planningStartDate} to {weekEndDate} | Status: {rosterWeek.status}
-        </p>
+      <div className="hidden print:block mb-3 pb-2.5 border-b-2 border-slate-900">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-widest text-slate-600">
+              National Institute of Business Management • School of Computing
+            </div>
+            <h1 className="text-lg font-black text-slate-950 tracking-tight">
+              Faculty Academic & Duty Timetable
+            </h1>
+          </div>
+          <div className="text-right">
+            <div className="text-xs font-bold text-slate-900">
+              Week: {planningStartDate} → {weekEndDate}
+            </div>
+            <div className="text-[10px] text-slate-600 font-medium">
+              Status: <span className="font-bold text-slate-900">{rosterWeek.status}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* High-Level Weekly KPI Metrics */}
@@ -429,8 +766,8 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
       </div>
 
       {/* 7-Day Master Roster Matrix */}
-      <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-800/60">
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-sm overflow-hidden print:bg-white print:border-0 print:rounded-none print:shadow-none print:m-0 print:p-0">
+        <div className="p-4 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-800/60 print:hidden">
           <div>
             <h3 className="font-bold text-slate-100 text-base flex items-center gap-2">
               <Calendar className="w-4 h-4 text-blue-600" />
@@ -455,7 +792,7 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
         </div>
 
         {/* 7-Column Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 divide-y lg:divide-y-0 lg:divide-x divide-slate-800 bg-slate-800">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 print:grid-cols-7 divide-y lg:divide-y-0 lg:divide-x print:divide-y-0 print:divide-x divide-slate-800 print:divide-slate-300 bg-slate-800 print:bg-white print:border print:border-slate-300 print:rounded-lg print:overflow-hidden print:w-full">
           {weekDays.map((day) => {
             // Find morning assignments for this day
             const morningDuties = filteredAssignments.filter(
@@ -484,29 +821,33 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
             return (
               <div
                 key={day.dateStr}
-                className={`bg-slate-900 flex flex-col min-h-[520px] ${
-                  day.isToday ? 'ring-2 ring-blue-500 z-10' : ''
+                className={`${
+                  mobileSelectedDay !== 'ALL' && mobileSelectedDay !== day.dateStr
+                    ? 'hidden lg:flex'
+                    : 'flex'
+                } bg-slate-900 print:!flex print:bg-white flex-col min-h-[520px] print:min-h-0 print-avoid-break ${
+                  day.isToday ? 'ring-2 ring-blue-500 z-10 print:ring-0' : ''
                 }`}
               >
                 {/* Column Header */}
                 <div
-                  className={`p-3 border-b border-slate-800 text-center ${
+                  className={`p-3 print:p-1.5 border-b border-slate-800 print:border-b-2 print:border-slate-300 text-center ${
                     day.isToday
-                      ? 'bg-blue-600 text-white'
+                      ? 'bg-blue-600 text-white print:bg-slate-100 print:text-slate-950'
                       : day.isSunday
-                      ? 'bg-purple-500/10 text-purple-300'
-                      : 'bg-slate-800/60 text-slate-200'
+                      ? 'bg-purple-500/10 text-purple-300 print:bg-purple-50 print:text-purple-950'
+                      : 'bg-slate-800/60 text-slate-200 print:bg-slate-100 print:text-slate-950'
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black uppercase tracking-wider">{day.dayName}</span>
+                  <div className="flex items-center justify-between print:justify-center">
+                    <span className="text-xs print:text-[11px] font-black uppercase tracking-wider">{day.dayName}</span>
                     {day.isToday && (
-                      <span className="text-[9px] bg-slate-900 text-blue-400 font-bold px-1.5 py-0.2 rounded-full uppercase">
+                      <span className="text-[9px] bg-slate-900 text-blue-400 font-bold px-1.5 py-0.2 rounded-full uppercase print:hidden">
                         Today
                       </span>
                     )}
                   </div>
-                  <div className="text-sm font-black mt-0.5">{day.formattedDate}</div>
+                  <div className="text-sm print:text-xs font-black mt-0.5">{day.formattedDate}</div>
 
                   {/* Drilldown button to Daily Cockpit */}
                   {onSelectDateForCockpit && (
@@ -526,146 +867,99 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                 </div>
 
                 {/* Day Slots Container */}
-                <div className="p-2 space-y-3 flex-1 flex flex-col justify-between">
-                  <div className="space-y-3">
+                <div className="p-2 print:p-1 space-y-3 print:space-y-1 flex-1 flex flex-col justify-between">
+                  <div className="space-y-3 print:space-y-1">
                     {/* 1. MORNING SLOT (09:00 - 12:00) */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 uppercase tracking-wider px-1">
+                    <div className="space-y-1.5 print:space-y-0.5">
+                      <div className="flex items-center justify-between text-[11px] print:text-[9.5px] font-bold text-slate-300 print:text-slate-800 uppercase tracking-wider px-1">
                         <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-blue-600" />
+                          <Clock className="w-3 h-3 text-blue-600 print:text-blue-700" />
                           <span>09:00 - 12:00</span>
                         </span>
                         {morningDuties.length > 0 && (
-                          <span className="text-[10px] font-semibold text-blue-400 bg-blue-500/10 px-1 rounded">
+                          <span className="text-[10px] print:text-[8px] font-semibold text-blue-400 print:text-blue-900 bg-blue-500/10 print:bg-blue-100 px-1 rounded">
                             {morningDuties.length}
                           </span>
                         )}
                       </div>
 
                       {morningDuties.length === 0 ? (
-                        <div className="bg-slate-800/60 rounded-lg p-2 border border-dashed border-slate-800 text-center">
-                          <span className="text-[10px] text-slate-400 italic">No lectures</span>
+                        <div className="bg-slate-800/60 print:bg-slate-50 rounded-lg print:rounded p-2 print:p-1 border border-dashed border-slate-800 print:border-slate-300 text-center">
+                          <span className="text-[10px] print:text-[8.5px] text-slate-400 print:text-slate-500 italic">No lectures</span>
                         </div>
                       ) : (
-                        morningDuties.map((duty) => (
-                          <div
-                            key={duty.id}
-                            className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-2 shadow-2xs hover:shadow-xs transition-shadow"
-                          >
-                            <div className="text-xs font-bold text-blue-300 line-clamp-2 leading-snug">
-                              {duty.moduleName}
-                            </div>
-                            <div className="mt-1 flex items-center justify-between text-[11px]">
-                              <span className="bg-blue-500/25 text-blue-400 font-bold px-1.5 py-0.2 rounded text-[10px]">
-                                {duty.batchName}
-                              </span>
-                              {duty.roomLab && (
-                                <span className="text-slate-400 font-medium text-[10px] flex items-center gap-0.5">
-                                  <MapPin className="w-2.5 h-2.5 text-slate-400" />
-                                  {duty.roomLab}
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-1.5 pt-1 border-t border-blue-100 flex items-center space-x-1 text-[11px] font-semibold text-slate-200">
-                              <div className="w-4 h-4 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-[9px]">
-                                {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
-                              </div>
-                              <span className="truncate">{duty.instructorName}</span>
-                            </div>
-                          </div>
-                        ))
+                        morningDuties.map((duty) => {
+                          const isFullDay = afternoonDuties.some((a) => isSameSession(duty, a));
+                          return (
+                            <SessionCard
+                              key={duty.id}
+                              duty={duty}
+                              slotType="morning"
+                              isFullDay={isFullDay}
+                              allInstructors={allInstructors}
+                            />
+                          );
+                        })
                       )}
                     </div>
 
                     {/* 2. AFTERNOON SLOT (13:00 - 16:00) */}
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px] font-bold text-slate-300 uppercase tracking-wider px-1">
+                    <div className="space-y-1.5 print:space-y-0.5">
+                      <div className="flex items-center justify-between text-[11px] print:text-[9.5px] font-bold text-slate-300 print:text-slate-800 uppercase tracking-wider px-1">
                         <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3 text-amber-600" />
+                          <Clock className="w-3 h-3 text-amber-600 print:text-amber-700" />
                           <span>13:00 - 16:00</span>
                         </span>
                         {afternoonDuties.length > 0 && (
-                          <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-1 rounded">
+                          <span className="text-[10px] print:text-[8px] font-semibold text-amber-400 print:text-amber-900 bg-amber-500/10 print:bg-amber-100 px-1 rounded">
                             {afternoonDuties.length}
                           </span>
                         )}
                       </div>
 
                       {afternoonDuties.length === 0 ? (
-                        <div className="bg-slate-800/60 rounded-lg p-2 border border-dashed border-slate-800 text-center">
-                          <span className="text-[10px] text-slate-400 italic">No lectures</span>
+                        <div className="bg-slate-800/60 print:bg-slate-50 rounded-lg print:rounded p-2 print:p-1 border border-dashed border-slate-800 print:border-slate-300 text-center">
+                          <span className="text-[10px] print:text-[8.5px] text-slate-400 print:text-slate-500 italic">No lectures</span>
                         </div>
                       ) : (
-                        afternoonDuties.map((duty) => (
-                          <div
-                            key={duty.id}
-                            className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-2 shadow-2xs hover:shadow-xs transition-shadow"
-                          >
-                            <div className="text-xs font-bold text-amber-300 line-clamp-2 leading-snug">
-                              {duty.moduleName}
-                            </div>
-                            <div className="mt-1 flex items-center justify-between text-[11px]">
-                              <span className="bg-amber-500/25 text-amber-400 font-bold px-1.5 py-0.2 rounded text-[10px]">
-                                {duty.batchName}
-                              </span>
-                              {duty.roomLab && (
-                                <span className="text-slate-400 font-medium text-[10px] flex items-center gap-0.5">
-                                  <MapPin className="w-2.5 h-2.5 text-slate-400" />
-                                  {duty.roomLab}
-                                </span>
-                              )}
-                            </div>
-                            <div className="mt-1.5 pt-1 border-t border-amber-100 flex items-center space-x-1 text-[11px] font-semibold text-slate-200">
-                              <div className="w-4 h-4 rounded-full bg-amber-600 text-white font-bold flex items-center justify-center text-[9px]">
-                                {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
-                              </div>
-                              <span className="truncate">{duty.instructorName}</span>
-                            </div>
-                          </div>
-                        ))
+                        afternoonDuties.map((duty) => {
+                          const isFullDay = morningDuties.some((m) => isSameSession(duty, m));
+                          return (
+                            <SessionCard
+                              key={duty.id}
+                              duty={duty}
+                              slotType="afternoon"
+                              isFullDay={isFullDay}
+                              allInstructors={allInstructors}
+                            />
+                          );
+                        })
                       )}
                     </div>
 
                     {/* 3. SUNDAY CCS SPECIAL SLOT (16:30 - 17:30) */}
                     {day.isSunday && (
-                      <div className="space-y-1.5 pt-1">
-                        <div className="flex items-center justify-between text-[11px] font-bold text-purple-400 uppercase tracking-wider px-1">
+                      <div className="space-y-1.5 print:space-y-0.5 pt-1">
+                        <div className="flex items-center justify-between text-[11px] print:text-[9.5px] font-bold text-purple-400 print:text-purple-800 uppercase tracking-wider px-1">
                           <span className="flex items-center gap-1">
-                            <Sparkles className="w-3 h-3 text-purple-600" />
+                            <Sparkles className="w-3 h-3 text-purple-600 shrink-0" />
                             <span>Sunday CCS (16:30 - 17:30)</span>
                           </span>
                         </div>
 
                         {sundayDuties.length === 0 ? (
-                          <div className="bg-purple-500/10 rounded-lg p-2 border border-dashed border-purple-500/20 text-center">
-                            <span className="text-[10px] text-purple-400 italic">No CCS session</span>
+                          <div className="bg-purple-500/10 print:bg-purple-50/50 rounded-lg print:rounded p-2 print:p-1 border border-dashed border-purple-500/20 print:border-purple-200 text-center">
+                            <span className="text-[10px] print:text-[8.5px] text-purple-400 print:text-purple-600 italic">No CCS session</span>
                           </div>
                         ) : (
                           sundayDuties.map((duty) => (
-                            <div
+                            <SessionCard
                               key={duty.id}
-                              className="bg-purple-500/15 border border-purple-500/20 rounded-lg p-2 shadow-2xs"
-                            >
-                              <div className="text-xs font-bold text-purple-300 leading-snug">
-                                {duty.moduleName}
-                              </div>
-                              <div className="mt-1 flex items-center justify-between text-[11px]">
-                                <span className="bg-purple-500/25 text-purple-400 font-black px-1.5 py-0.2 rounded text-[10px]">
-                                  {duty.batchName}
-                                </span>
-                                {duty.roomLab && (
-                                  <span className="text-slate-400 font-medium text-[10px]">
-                                    {duty.roomLab}
-                                  </span>
-                                )}
-                              </div>
-                              <div className="mt-1.5 pt-1 border-t border-purple-500/20 flex items-center space-x-1 text-[11px] font-semibold text-purple-300">
-                                <div className="w-4 h-4 rounded-full bg-purple-700 text-white font-bold flex items-center justify-center text-[9px]">
-                                  {duty.instructorName ? duty.instructorName.substring(0, 1) : 'I'}
-                                </div>
-                                <span className="truncate">{duty.instructorName}</span>
-                              </div>
-                            </div>
+                              duty={duty}
+                              slotType="sunday"
+                              isFullDay={false}
+                              allInstructors={allInstructors}
+                            />
                           ))
                         )}
                       </div>
@@ -673,46 +967,51 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                   </div>
 
                   {/* BOTTOM SECTION: NIGHT SHIFT & LEAVES */}
-                  <div className="pt-2 border-t border-slate-800 space-y-2">
+                  <div className="pt-2 print:pt-1 border-t border-slate-800 print:border-slate-300 space-y-2 print:space-y-1">
                     {/* Night Shift Officer */}
-                    <div className="bg-indigo-950 text-white rounded-lg p-2 text-xs">
-                      <div className="flex items-center justify-between text-[10px] font-bold text-indigo-300 uppercase tracking-wider">
+                    <div className="bg-indigo-950 print:bg-indigo-50/80 text-white print:text-indigo-950 rounded-lg print:rounded p-2 print:p-1 text-xs print:border print:border-indigo-200 print-avoid-break">
+                      <div className="flex items-center justify-between text-[10px] print:text-[9px] font-bold text-indigo-300 print:text-indigo-800 uppercase tracking-wider">
                         <span className="flex items-center gap-1">
-                          <Moon className="w-3 h-3 text-amber-300" />
+                          <Moon className="w-3 h-3 text-amber-300 print:text-indigo-600 shrink-0" />
                           <span>Night Shift</span>
                         </span>
                       </div>
-                      <div className="mt-1 font-bold text-white text-[11px] truncate">
+                      <div className="mt-1 font-bold text-white print:text-indigo-950 text-[11px] print:text-[9.5px] truncate">
                         {nightInstructor ? (
-                          <span className="text-amber-300">{nightInstructor.fullName}</span>
+                          <span className="text-amber-300 print:text-indigo-900">{nightInstructor.fullName}</span>
                         ) : (
-                          <span className="text-slate-400 italic font-normal text-[10px]">Not Assigned</span>
+                          <span className="text-slate-400 print:text-slate-500 italic font-normal text-[10px] print:text-[8.5px]">Not Assigned</span>
                         )}
                       </div>
                       {nightInstructor?.phone && (
-                        <a
-                          href={`tel:${nightInstructor.phone.replace(/\s+/g, '')}`}
-                          className="inline-flex items-center gap-1 text-[10px] text-amber-300 hover:text-white mt-1 bg-indigo-900/80 hover:bg-indigo-800 px-2 py-0.5 rounded font-bold transition-colors cursor-pointer"
-                          title={`Call ${nightInstructor.fullName}`}
-                        >
-                          <Phone className="w-2.5 h-2.5" />
-                          <span>Call: {nightInstructor.phone}</span>
-                        </a>
+                        <div className="mt-0.5 text-[10px] print:text-[8px] text-slate-300 print:text-slate-600 truncate">
+                          <span className="print:hidden">
+                            <a
+                              href={`tel:${nightInstructor.phone.replace(/\s+/g, '')}`}
+                              className="inline-flex items-center gap-1 text-[10px] text-amber-300 hover:text-white mt-1 bg-indigo-900/80 hover:bg-indigo-800 px-2 py-0.5 rounded font-bold transition-colors cursor-pointer"
+                              title={`Call ${nightInstructor.fullName}`}
+                            >
+                              <Phone className="w-2.5 h-2.5" />
+                              <span>Call: {nightInstructor.phone}</span>
+                            </a>
+                          </span>
+                          <span className="hidden print:inline">📞 {nightInstructor.phone}</span>
+                        </div>
                       )}
                     </div>
 
                     {/* Approved Leaves On This Date */}
                     {dayLeaves.length > 0 && (
-                      <div className="bg-rose-500/10 border border-rose-500/20 rounded-lg p-1.5">
-                        <div className="text-[10px] font-bold text-rose-400 uppercase flex items-center gap-1">
-                          <AlertCircle className="w-2.5 h-2.5 text-rose-600" />
+                      <div className="bg-rose-500/10 print:bg-rose-50/80 border border-rose-500/20 print:border-rose-200 rounded-lg print:rounded p-1.5 print:p-1 print-avoid-break">
+                        <div className="text-[10px] print:text-[8.5px] font-bold text-rose-400 print:text-rose-800 uppercase flex items-center gap-1">
+                          <AlertCircle className="w-2.5 h-2.5 text-rose-600 shrink-0" />
                           <span>On Leave ({dayLeaves.length})</span>
                         </div>
                         <div className="mt-1 space-y-0.5">
                           {dayLeaves.map((l) => (
                             <div
                               key={l.id}
-                              className="text-[10px] font-medium text-rose-400 bg-rose-500/15 px-1 py-0.5 rounded truncate"
+                              className="text-[10px] print:text-[8px] font-medium text-rose-400 print:text-rose-900 bg-rose-500/15 print:bg-rose-100 px-1 py-0.2 rounded truncate"
                               title={`${l.instructorName}: ${l.reason}`}
                             >
                               {l.instructorName}
@@ -730,62 +1029,62 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
       </div>
 
       {/* Cadre Deployment & Workload Summary Table */}
-      <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-800/60">
+      <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-sm overflow-hidden print:bg-white print:border print:border-slate-300 print:rounded-lg print:shadow-none print-page-break print:mt-4">
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between bg-slate-800/60 print:bg-slate-100 print:border-b print:border-slate-300 print:p-2.5">
           <div>
-            <h3 className="font-bold text-slate-100 text-base flex items-center gap-2">
-              <Users className="w-4 h-4 text-blue-600" />
+            <h3 className="font-bold text-slate-100 text-base flex items-center gap-2 print:text-slate-900 print:text-xs">
+              <Users className="w-4 h-4 text-blue-600 print:text-blue-700" />
               <span>Instructor Cadre Weekly Workload & Deployment Table</span>
             </h3>
-            <p className="text-xs text-slate-300 mt-0.5">
-              Comprehensive distribution of teaching hours and night shifts for all 8 team members across this 7-day period.
+            <p className="text-xs text-slate-300 mt-0.5 print:text-[10px] print:text-slate-600">
+              Comprehensive distribution of teaching hours and night shifts for all {allInstructors.length} team members across this 7-day period.
             </p>
           </div>
-          <span className="text-xs font-bold text-slate-300 bg-slate-700 px-2.5 py-1 rounded-full">
+          <span className="text-xs font-bold text-slate-300 bg-slate-700 px-2.5 py-1 rounded-full print:bg-slate-200 print:text-slate-800 print:text-[9px] print:px-2 print:py-0.5">
             {allInstructors.length} Instructors Monitored
           </span>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-slate-300">
-            <thead className="bg-slate-800/80 text-slate-300 font-bold border-b border-slate-800 uppercase text-[10px] tracking-wider">
+          <table className="w-full text-left text-xs text-slate-300 print:text-[9px] print:text-slate-800">
+            <thead className="bg-slate-800/80 text-slate-300 font-bold border-b border-slate-800 uppercase text-[10px] tracking-wider print:bg-slate-100 print:text-slate-800 print:border-slate-300 print:text-[8px]">
               <tr>
-                <th className="px-4 py-3">Instructor</th>
-                <th className="px-3 py-3 text-center">Morning (09-12)</th>
-                <th className="px-3 py-3 text-center">Afternoon (13-16)</th>
-                <th className="px-3 py-3 text-center">Sunday CCS</th>
-                <th className="px-3 py-3 text-center">Total Sessions</th>
-                <th className="px-3 py-3 text-center">Est. Teaching Hrs</th>
-                <th className="px-4 py-3 text-center">Night Shifts</th>
-                <th className="px-4 py-3 text-center">Leave Status</th>
-                <th className="px-4 py-3 text-center">Workload Balance</th>
+                <th className="px-4 py-3 print:px-2 print:py-1.5">Instructor</th>
+                <th className="px-3 py-3 text-center print:px-1.5 print:py-1.5">Morning (09-12)</th>
+                <th className="px-3 py-3 text-center print:px-1.5 print:py-1.5">Afternoon (13-16)</th>
+                <th className="px-3 py-3 text-center print:px-1.5 print:py-1.5">Sunday CCS</th>
+                <th className="px-3 py-3 text-center print:px-1.5 print:py-1.5">Total Sessions</th>
+                <th className="px-3 py-3 text-center print:px-1.5 print:py-1.5">Est. Teaching Hrs</th>
+                <th className="px-4 py-3 text-center print:px-2 print:py-1.5">Night Shifts</th>
+                <th className="px-4 py-3 text-center print:px-2 print:py-1.5">Leave Status</th>
+                <th className="px-4 py-3 text-center print:px-2 print:py-1.5">Workload Balance</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
+            <tbody className="divide-y divide-slate-800 print:divide-slate-200">
               {instructorStats.map((item) => {
                 const isSelected = selectedInstructorId === item.instructor.id;
                 const totalHours = item.totalHours;
 
                 let balanceBadge = (
-                  <span className="bg-emerald-500/15 text-emerald-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  <span className="bg-emerald-500/15 text-emerald-400 print:bg-emerald-100 print:text-emerald-900 text-[10px] print:text-[8px] font-bold px-2 py-0.5 rounded-full">
                     Balanced
                   </span>
                 );
                 if (item.onLeaveDates.length >= 3) {
                   balanceBadge = (
-                    <span className="bg-rose-500/15 text-rose-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <span className="bg-rose-500/15 text-rose-400 print:bg-rose-100 print:text-rose-900 text-[10px] print:text-[8px] font-bold px-2 py-0.5 rounded-full">
                       On Leave
                     </span>
                   );
                 } else if (item.totalSessions >= 5) {
                   balanceBadge = (
-                    <span className="bg-purple-500/15 text-purple-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <span className="bg-purple-500/15 text-purple-400 print:bg-purple-100 print:text-purple-900 text-[10px] print:text-[8px] font-bold px-2 py-0.5 rounded-full">
                       Heavy Load
                     </span>
                   );
                 } else if (item.totalSessions === 0 && item.onLeaveDates.length === 0) {
                   balanceBadge = (
-                    <span className="bg-amber-500/15 text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    <span className="bg-amber-500/15 text-amber-400 print:bg-amber-100 print:text-amber-900 text-[10px] print:text-[8px] font-bold px-2 py-0.5 rounded-full">
                       Standby / Free
                     </span>
                   );
@@ -794,69 +1093,69 @@ export const WeeklyScheduleView: React.FC<WeeklyScheduleViewProps> = ({
                 return (
                   <tr
                     key={item.instructor.id}
-                    className={`hover:bg-slate-800/80 transition-colors ${
-                      isSelected ? 'bg-blue-500/10 font-semibold' : ''
+                    className={`hover:bg-slate-800/80 transition-colors print:hover:bg-transparent ${
+                      isSelected ? 'bg-blue-500/10 font-semibold print:bg-blue-50' : ''
                     }`}
                   >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center space-x-2.5">
-                        <div className="w-7 h-7 rounded-full bg-slate-700 text-slate-200 font-black flex items-center justify-center text-[10px]">
+                    <td className="px-4 py-3 print:px-2 print:py-1">
+                      <div className="flex items-center space-x-2.5 print:space-x-1.5">
+                        <div className="w-7 h-7 print:w-5 print:h-5 rounded-full bg-slate-700 print:bg-slate-200 text-slate-200 print:text-slate-800 font-black flex items-center justify-center text-[10px] print:text-[8px]">
                           {item.instructor.fullName.substring(0, 2).toUpperCase()}
                         </div>
                         <div>
-                          <div className="font-bold text-slate-100">{item.instructor.fullName}</div>
+                          <div className="font-bold text-slate-100 print:text-slate-900 print:text-[10px]">{item.instructor.fullName}</div>
                           {item.instructor.phone ? (
                             <a
                               href={`tel:${item.instructor.phone.replace(/\s+/g, '')}`}
-                              className="inline-flex items-center gap-1 text-[10px] text-emerald-400 hover:text-emerald-400 font-semibold hover:underline"
+                              className="inline-flex items-center gap-1 text-[10px] print:text-[8.5px] text-emerald-400 print:text-emerald-800 hover:text-emerald-400 font-semibold hover:underline"
                               title={`Call ${item.instructor.fullName}`}
                             >
-                              <Phone className="w-2.5 h-2.5 text-emerald-600" />
+                              <Phone className="w-2.5 h-2.5 text-emerald-600 print:hidden" />
                               <span>{item.instructor.phone}</span>
                             </a>
                           ) : (
-                            <div className="text-[10px] text-slate-400">@{item.instructor.username}</div>
+                            <div className="text-[10px] print:text-[8.5px] text-slate-400 print:text-slate-500">@{item.instructor.username}</div>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-3 py-3 text-center font-medium">{item.morningCount}</td>
-                    <td className="px-3 py-3 text-center font-medium">{item.afternoonCount}</td>
-                    <td className="px-3 py-3 text-center font-medium">
+                    <td className="px-3 py-3 print:px-1.5 print:py-1 text-center font-medium print:text-slate-800">{item.morningCount}</td>
+                    <td className="px-3 py-3 print:px-1.5 print:py-1 text-center font-medium print:text-slate-800">{item.afternoonCount}</td>
+                    <td className="px-3 py-3 print:px-1.5 print:py-1 text-center font-medium">
                       {item.sundayCount > 0 ? (
-                        <span className="text-purple-400 font-bold">{item.sundayCount}</span>
+                        <span className="text-purple-400 print:text-purple-800 font-bold">{item.sundayCount}</span>
                       ) : (
-                        '-'
+                        <span className="print:text-slate-400">-</span>
                       )}
                     </td>
-                    <td className="px-3 py-3 text-center">
-                      <span className="font-black text-slate-100 text-sm">{item.totalSessions}</span>
+                    <td className="px-3 py-3 print:px-1.5 print:py-1 text-center">
+                      <span className="font-black text-slate-100 print:text-slate-900 text-sm print:text-xs">{item.totalSessions}</span>
                     </td>
-                    <td className="px-3 py-3 text-center font-semibold text-slate-200">
+                    <td className="px-3 py-3 print:px-1.5 print:py-1 text-center font-semibold text-slate-200 print:text-slate-800">
                       {totalHours} hrs
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 print:px-2 print:py-1 text-center">
                       {item.nightShiftsCount > 0 ? (
-                        <span className="inline-flex items-center gap-1 bg-indigo-500/15 text-indigo-400 font-bold px-2 py-0.5 rounded text-[11px]">
-                          <Moon className="w-3 h-3 text-amber-500" />
+                        <span className="inline-flex items-center gap-1 bg-indigo-500/15 print:bg-indigo-100 text-indigo-400 print:text-indigo-900 font-bold px-2 py-0.5 rounded text-[11px] print:text-[8px]">
+                          <Moon className="w-3 h-3 text-amber-500 print:text-indigo-700" />
                           <span>{item.nightShiftsCount} Night{item.nightShiftsCount > 1 ? 's' : ''}</span>
                         </span>
                       ) : (
-                        <span className="text-slate-400 text-[11px]">None</span>
+                        <span className="text-slate-400 print:text-slate-500 text-[11px] print:text-[8px]">None</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center">
+                    <td className="px-4 py-3 print:px-2 print:py-1 text-center">
                       {item.onLeaveDates.length > 0 ? (
-                        <span className="bg-rose-500/15 text-rose-400 font-semibold px-2 py-0.5 rounded text-[10px]">
+                        <span className="bg-rose-500/15 print:bg-rose-100 text-rose-400 print:text-rose-900 font-semibold px-2 py-0.5 rounded text-[10px] print:text-[8px]">
                           {item.onLeaveDates.length} day{item.onLeaveDates.length > 1 ? 's' : ''} away
                         </span>
                       ) : (
-                        <span className="text-emerald-400 font-semibold text-[11px] flex items-center justify-center gap-0.5">
-                          <CheckCircle2 className="w-3 h-3 text-emerald-600" /> Available
+                        <span className="text-emerald-400 print:text-emerald-800 font-semibold text-[11px] print:text-[8px] flex items-center justify-center gap-0.5">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-600 print:text-emerald-700" /> Available
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-center">{balanceBadge}</td>
+                    <td className="px-4 py-3 print:px-2 print:py-1 text-center">{balanceBadge}</td>
                   </tr>
                 );
               })}

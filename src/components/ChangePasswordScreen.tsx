@@ -1,21 +1,26 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Lock, ArrowRight, AlertCircle } from 'lucide-react';
+import { Lock, ArrowRight, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { User } from '@/types';
 import { changePasswordAction } from '@/lib/actions';
 
 interface ChangePasswordScreenProps {
   currentUser: User;
   onDone: () => void;
+  isRefreshing?: boolean;
 }
 
-export const ChangePasswordScreen: React.FC<ChangePasswordScreenProps> = ({ currentUser, onDone }) => {
+export const ChangePasswordScreen: React.FC<ChangePasswordScreenProps> = ({ currentUser, onDone, isRefreshing }) => {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const busy = submitting || !!isRefreshing;
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,13 +37,16 @@ export const ChangePasswordScreen: React.FC<ChangePasswordScreenProps> = ({ curr
 
     setSubmitting(true);
     const res = await changePasswordAction(currentPassword, newPassword);
-    setSubmitting(false);
 
     if (!res.success) {
+      setSubmitting(false);
       setError(res.error || 'Failed to change password.');
       return;
     }
+    // Same reasoning as the login form: keep the button pinned to its busy
+    // state through the parent's session refresh, not just this call.
     onDone();
+    setSubmitting(false);
   };
 
   return (
@@ -65,44 +73,77 @@ export const ChangePasswordScreen: React.FC<ChangePasswordScreenProps> = ({ curr
 
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1.5">Temporary Password</label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="w-full text-sm bg-slate-950 border border-slate-700 text-white rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showCurrent ? 'text' : 'password'}
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  className="w-full text-sm bg-slate-950 border border-slate-700 text-white rounded-lg px-3 pr-9 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrent((v) => !v)}
+                  tabIndex={-1}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
+                  title={showCurrent ? 'Hide password' : 'Show password'}
+                >
+                  {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1.5">New Password</label>
-              <input
-                type="password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="At least 8 characters"
-                className="w-full text-sm bg-slate-950 border border-slate-700 text-white rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-600"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showNew ? 'text' : 'password'}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="At least 8 characters"
+                  className="w-full text-sm bg-slate-950 border border-slate-700 text-white rounded-lg px-3 pr-9 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 placeholder:text-slate-600"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNew((v) => !v)}
+                  tabIndex={-1}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
+                  title={showNew ? 'Hide password' : 'Show password'}
+                >
+                  {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <div>
               <label className="block text-xs font-medium text-slate-400 mb-1.5">Confirm New Password</label>
-              <input
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full text-sm bg-slate-950 border border-slate-700 text-white rounded-lg px-3 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
-                required
-              />
+              <div className="relative">
+                <input
+                  type={showConfirm ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full text-sm bg-slate-950 border border-slate-700 text-white rounded-lg px-3 pr-9 py-2.5 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm((v) => !v)}
+                  tabIndex={-1}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 cursor-pointer"
+                  title={showConfirm ? 'Hide password' : 'Show password'}
+                >
+                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <button
               type="submit"
-              disabled={submitting}
-              className="w-full flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-medium text-sm py-2.5 px-4 rounded-lg transition-colors cursor-pointer"
+              disabled={busy}
+              className="w-full flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm py-2.5 px-4 rounded-lg transition-colors cursor-pointer"
             >
-              <span>{submitting ? 'Saving...' : 'Set Password & Continue'}</span>
+              <span>{busy ? 'Saving...' : 'Set Password & Continue'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
