@@ -53,6 +53,7 @@ model User {
   approvedLeaves  LeaveRequest[] @relation("ReviewerLeaves")
   publishedWeeks  RosterWeek[]   @relation("PublishedWeeks")
   auditLogs       AuditLog[]
+  pushTokens      PushToken[]
 }
 
 // Dates below (startDate/endDate/dutyDate/shiftDate) are deliberately plain
@@ -127,6 +128,7 @@ model LeaveRequest {
   endDate       String
   reason        String
   status        LeaveStatus @default(PENDING)
+  appliedAt     DateTime    @default(now())
   reviewedById  String?
   reviewedBy    User?       @relation("ReviewerLeaves", fields: [reviewedById], references: [id])
   reviewedAt    DateTime?
@@ -140,6 +142,7 @@ model LeaveRequest {
   @@index([instructorId, status, startDate, endDate])
   @@index([status, startDate, endDate])
   @@index([reviewedById])
+  @@index([appliedAt])
 }
 
 model AuditLog {
@@ -167,3 +170,18 @@ model Catalog {
   dutyTypes          String[] @default([])
   autoRefreshSeconds Int      @default(5)
 }
+
+model PushToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String
+  device    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, token])
+  @@index([userId])
+  @@index([token])
+}
+

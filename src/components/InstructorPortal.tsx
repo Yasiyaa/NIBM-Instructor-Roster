@@ -20,7 +20,7 @@ import {
   Info,
 } from 'lucide-react';
 import { submitLeaveAction } from '@/lib/actions';
-import { mergeDutyAssignments } from '@/lib/roster-utils';
+import { mergeDutyAssignments, formatApplicationDateTime } from '@/lib/roster-utils';
 import { useDialog } from './DialogProvider';
 
 interface InstructorPortalProps {
@@ -181,8 +181,9 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
 
     try {
       await submitLeaveAction(currentUser.id, startDate, end, reason.trim());
+      const appliedTimeStr = formatApplicationDateTime(new Date().toISOString());
       setSuccessMessage(
-        `Holiday application submitted! It's now awaiting review in the Leave Approvals queue.`
+        `Holiday application submitted on ${appliedTimeStr}! It is now logged and awaiting review in the Leave Approvals queue.`
       );
       setReason('');
       setStartDate('');
@@ -646,8 +647,13 @@ export const InstructorPortal: React.FC<InstructorPortalProps> = ({
                         {leave.status}
                       </span>
                     </div>
-                    <div className="text-[11px] text-slate-400">
-                      {leave.startDate} {leave.startDate !== leave.endDate && `to ${leave.endDate}`}
+                    <div className="flex flex-wrap items-center gap-x-2 text-[11px] text-slate-400">
+                      <span>{leave.startDate} {leave.startDate !== leave.endDate && `to ${leave.endDate}`}</span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1 text-slate-400">
+                        <Clock className="w-3 h-3 text-purple-400" />
+                        <span>Applied: <strong className="text-slate-300 font-medium">{formatApplicationDateTime(leave.appliedAt || leave.createdAt)}</strong></span>
+                      </span>
                     </div>
                     <p className="text-slate-400 italic mt-1">&ldquo;{leave.reason}&rdquo;</p>
                     {leave.reviewedByName && (

@@ -60,6 +60,7 @@ export interface LeaveRequest {
   endDate: string;   // YYYY-MM-DD
   reason: string;
   status: LeaveStatus;
+  appliedAt: string; // ISO 8601 string recording the exact date and time of application
   reviewedById?: string;
   reviewedByName?: string;
   reviewedAt?: string;
@@ -162,5 +163,13 @@ export interface AiSubstituteSuggestion {
   isAvailable: boolean;
   score: number;
   matchReason: string;
+}
+
+export interface PushToken {
+  id: string;
+  userId: string;
+  token: string;
+  device?: string;
+  createdAt: string;
 }
 

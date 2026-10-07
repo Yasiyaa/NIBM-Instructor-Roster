@@ -71,8 +71,36 @@ async function ensureAdminSeeded(): Promise<void> {
   const adminPassword = process.env.ADMIN_PASSWORD;
   if (!adminUsername || !adminPassword) return;
 
-  const existingAdmin = await prisma.user.findFirst({ where: { role: 'ADMIN' } });
-  if (existingAdmin) return;
+  const existingAdmin = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { role: 'ADMIN' },
+        ...(adminUsername ? [{ username: adminUsername }] : []),
+      ],
+    },
+  });
+
+  if (existingAdmin) {
+    // If ADMIN_PASSWORD is set in environment (e.g. Vercel), ensure the
+    // database admin's password hash is synchronized with the environment configuration.
+    const isMatching = await bcrypt.compare(adminPassword, existingAdmin.passwordHash);
+    if (!isMatching) {
+      await prisma.user.update({
+        where: { id: existingAdmin.id },
+        data: {
+          passwordHash: bcrypt.hashSync(adminPassword, SALT_ROUNDS),
+          mustChangePassword: false,
+          isActive: true,
+          ...(adminUsername ? { username: adminUsername } : {}),
+        },
+      });
+      await logAudit('ADMIN_PASSWORD_SYNCED', 'User', {
+        targetId: existingAdmin.id,
+        metadata: `Admin credentials synchronized from environment variables`,
+      });
+    }
+    return;
+  }
 
   // Two cold-start serverless instances could both reach this point at once
   // (each has its own adminSeedChecked flag); let the username unique
@@ -191,7 +219,27 @@ export async function verifyCredentials(
   if (!stored || !stored.isActive) {
     return { success: false, error: 'Invalid username or password.' };
   }
-  const valid = await bcrypt.compare(password, stored.passwordHash);
+  let valid = await bcrypt.compare(password, stored.passwordHash);
+
+  // If password comparison failed, check if this is an ADMIN account and
+  // the user entered the current ADMIN_PASSWORD environment variable
+  const envAdminPassword = process.env.ADMIN_PASSWORD;
+  const envAdminUsername = process.env.ADMIN_USERNAME ? normalizeUsername(process.env.ADMIN_USERNAME) : 'admin';
+  if (
+    !valid &&
+    stored.role === 'ADMIN' &&
+    envAdminPassword &&
+    (stored.username === envAdminUsername || stored.username === 'admin') &&
+    password === envAdminPassword
+  ) {
+    const newHash = bcrypt.hashSync(envAdminPassword, SALT_ROUNDS);
+    await prisma.user.update({
+      where: { id: stored.id },
+      data: { passwordHash: newHash, mustChangePassword: false, isActive: true },
+    });
+    valid = true;
+  }
+
   if (!valid) {
     return { success: false, error: 'Invalid username or password.' };
   }
@@ -443,6 +491,19 @@ export async function publishRosterWeek(weekId: string, publishedById: string): 
     metadata: `Published roster week ${updated.startDate} to ${updated.endDate}`,
   });
   return mapRosterWeek(updated, publisher?.fullName || 'Demonstrator');
+}
+
+export async function unpublishRosterWeek(weekId: string, actorId: string): Promise<RosterWeek> {
+  const updated = await prisma.rosterWeek.update({
+    where: { id: weekId },
+    data: { status: 'DRAFT', publishedAt: null, publishedById: null },
+  });
+  await logAudit('ROSTER_UNPUBLISHED', 'RosterWeek', {
+    userId: actorId,
+    targetId: weekId,
+    metadata: `Reverted roster week ${updated.startDate} to ${updated.endDate} to DRAFT`,
+  });
+  return mapRosterWeek(updated);
 }
 
 // ----------------------------------------------------
@@ -700,7 +761,7 @@ export async function setNightShift(
   instructorId: string,
   notes?: string,
   actorId?: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; shift?: NightShift }> {
   const instructor = await getUserById(instructorId);
 
   const hasLeave = await prisma.leaveRequest.findFirst({
@@ -719,6 +780,7 @@ export async function setNightShift(
     where: { shiftDate },
     update: { instructorId, rosterWeekId, notes },
     create: { rosterWeekId, instructorId, shiftDate, notes },
+    include: { instructor: true },
   });
 
   await logAudit('NIGHT_DUTY_SET', 'NightShift', {
@@ -726,7 +788,7 @@ export async function setNightShift(
     targetId: saved.id,
     metadata: `${instructor?.fullName || ''} set as night duty on ${shiftDate}`,
   });
-  return { success: true };
+  return { success: true, shift: mapNightShift(saved) };
 }
 
 export async function removeNightShift(shiftDate: string, actorId?: string): Promise<boolean> {
@@ -757,6 +819,7 @@ function mapLeave(l: Prisma.LeaveRequestGetPayload<{ include: { instructor: true
     endDate: l.endDate,
     reason: l.reason,
     status: l.status,
+    appliedAt: (l.appliedAt ?? l.createdAt).toISOString(),
     reviewedById: l.reviewedById ?? undefined,
     reviewedByName: l.reviewedBy?.fullName ?? undefined,
     reviewedAt: l.reviewedAt?.toISOString(),
@@ -768,7 +831,7 @@ function mapLeave(l: Prisma.LeaveRequestGetPayload<{ include: { instructor: true
 export async function getAllLeaveRequests(): Promise<LeaveRequest[]> {
   const leaves = await prisma.leaveRequest.findMany({
     include: { instructor: true, reviewedBy: true },
-    orderBy: { createdAt: 'desc' },
+    orderBy: { appliedAt: 'desc' },
   });
   return leaves.map(mapLeave);
 }
@@ -777,18 +840,27 @@ export async function createLeaveRequest(
   instructorId: string,
   startDate: string,
   endDate: string,
-  reason: string
+  reason: string,
+  appliedAt?: Date
 ): Promise<LeaveRequest> {
   const instructor = await getUserById(instructorId);
+  const now = appliedAt || new Date();
   const created = await prisma.leaveRequest.create({
-    data: { instructorId, startDate, endDate, reason, status: 'PENDING' },
+    data: {
+      instructorId,
+      startDate,
+      endDate,
+      reason,
+      status: 'PENDING',
+      appliedAt: now,
+    },
     include: { instructor: true, reviewedBy: true },
   });
 
   await logAudit('LEAVE_REQUESTED', 'LeaveRequest', {
     userId: instructorId,
     targetId: created.id,
-    metadata: `${instructor?.fullName || ''} requested leave ${startDate} to ${endDate}: ${reason}`,
+    metadata: `${instructor?.fullName || ''} applied for leave on ${now.toISOString()} (${startDate} to ${endDate}): ${reason}`,
   });
   return mapLeave(created);
 }
@@ -817,6 +889,27 @@ export async function reviewLeaveRequest(
     metadata: `${updated.instructor?.fullName || 'Instructor'}'s leave (${updated.startDate} to ${updated.endDate}) ${status.toLowerCase()} by ${reviewer?.fullName || 'Administrator'}: ${updated.reviewComment}`,
   });
   return mapLeave(updated);
+}
+
+export async function cancelLeaveRequest(
+  leaveId: string,
+  instructorId: string
+): Promise<{ success: boolean; error?: string }> {
+  const leave = await prisma.leaveRequest.findUnique({ where: { id: leaveId } });
+  if (!leave) return { success: false, error: 'Leave request not found.' };
+  if (leave.instructorId !== instructorId) {
+    return { success: false, error: 'Unauthorized to cancel this leave request.' };
+  }
+  if (leave.status !== 'PENDING') {
+    return { success: false, error: 'Only pending leave requests can be cancelled.' };
+  }
+  await prisma.leaveRequest.delete({ where: { id: leaveId } });
+  await logAudit('LEAVE_CANCELLED', 'LeaveRequest', {
+    userId: instructorId,
+    targetId: leaveId,
+    metadata: `Cancelled pending leave request (${leave.startDate} to ${leave.endDate})`,
+  });
+  return { success: true };
 }
 
 // ----------------------------------------------------
@@ -885,6 +978,7 @@ function mapLeaveMinimal(l: Prisma.LeaveRequestGetPayload<Record<string, never>>
     endDate: l.endDate,
     reason: l.reason,
     status: l.status,
+    appliedAt: (l.appliedAt ?? l.createdAt).toISOString(),
     reviewedById: l.reviewedById ?? undefined,
     reviewedAt: l.reviewedAt?.toISOString(),
     reviewComment: l.reviewComment ?? undefined,
@@ -1217,3 +1311,78 @@ export async function updateAutoRefreshInterval(
   });
   return { success: true };
 }
+
+export async function savePushToken(
+  userId: string,
+  token: string,
+  device?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    await prisma.pushToken.upsert({
+      where: {
+        userId_token: {
+          userId,
+          token,
+        },
+      },
+      update: {
+        device: device || null,
+        updatedAt: new Date(),
+      },
+      create: {
+        userId,
+        token,
+        device: device || null,
+      },
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to save push token:', error);
+    return { success: false, error: 'Database error saving push token' };
+  }
+}
+
+export async function deletePushToken(
+  userId: string,
+  token: string
+): Promise<{ success: boolean }> {
+  try {
+    await prisma.pushToken.deleteMany({
+      where: {
+        userId,
+        token,
+      },
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Failed to delete push token:', error);
+    return { success: true };
+  }
+}
+
+export async function getPushTokensForUsers(userIds: string[]): Promise<string[]> {
+  if (userIds.length === 0) return [];
+  const records = await prisma.pushToken.findMany({
+    where: {
+      userId: { in: userIds },
+    },
+    select: {
+      token: true,
+    },
+  });
+  return records.map((r) => r.token);
+}
+
+export async function removeInvalidPushTokens(tokens: string[]): Promise<void> {
+  if (tokens.length === 0) return;
+  try {
+    await prisma.pushToken.deleteMany({
+      where: {
+        token: { in: tokens },
+      },
+    });
+  } catch (e) {
+    console.error('Failed to remove invalid push tokens:', e);
+  }
+}
+

@@ -48,6 +48,11 @@ import { Role, User, AiProposedDuty, AiConflictReport, AiSubstituteSuggestion } 
 import { scanRosterHealth, generateAiSchedule, findEligibleSubstitutes } from './ai-scheduler';
 import { revalidatePath, updateTag } from 'next/cache';
 import { redirect } from 'next/navigation';
+import {
+  broadcastPushNotification,
+  sendPushNotificationToUsers,
+  sendPushNotificationToRoles,
+} from './push-notifications';
 
 // Every mutating/sensitive action below re-derives the acting user from the
 // signed session -- never from a client-supplied id -- and checks their
@@ -190,6 +195,13 @@ export async function deleteDutyAction(assignmentId: string) {
 export async function setNightShiftAction(rosterWeekId: string, shiftDate: string, instructorId: string) {
   const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
   const res = await setNightShift(rosterWeekId, shiftDate, instructorId, undefined, actor.id);
+  if (res.success) {
+    sendPushNotificationToUsers([instructorId], {
+      title: '🌙 Night Duty Assignment',
+      body: `You have been scheduled for Night Duty on ${shiftDate}.`,
+      data: { type: 'NIGHT_DUTY', shiftDate },
+    }).catch((e) => console.error('[Push] Night shift alert error:', e));
+  }
   revalidatePath('/');
   return res;
 }
@@ -204,6 +216,11 @@ export async function removeNightShiftAction(shiftDate: string) {
 export async function publishRosterAction(weekId: string) {
   const actor = await requireRole('DEMONSTRATOR', 'ADMIN');
   const week = await publishRosterWeek(weekId, actor.id);
+  broadcastPushNotification({
+    title: '📅 Roster Published',
+    body: `The roster for ${week.startDate} to ${week.endDate} is now published.`,
+    data: { type: 'ROSTER_PUBLISHED', weekId },
+  }).catch((e) => console.error('[Push] Publish alert error:', e));
   revalidatePath('/');
   return { success: true, week };
 }
@@ -342,6 +359,11 @@ export async function submitLeaveAction(
   const reason = arg4 !== undefined ? arg4 : arg3;
 
   const leave = await createLeaveRequest(caller.id, startDate, endDate, reason);
+  sendPushNotificationToRoles(['ADMIN', 'EXECUTIVE'], {
+    title: '🌴 New Leave Request',
+    body: `${caller.fullName} submitted a leave request (${startDate} to ${endDate}).`,
+    data: { type: 'LEAVE_REQUEST', leaveId: leave.id },
+  }).catch((e) => console.error('[Push] Leave submit alert error:', e));
   revalidatePath('/');
   return { success: true, leave };
 }
@@ -349,6 +371,11 @@ export async function submitLeaveAction(
 export async function reviewLeaveAction(leaveId: string, status: 'APPROVED' | 'REJECTED', comment?: string) {
   const actor = await requireRole('DEMONSTRATOR', 'EXECUTIVE', 'ADMIN');
   const updated = await reviewLeaveRequest(leaveId, status, actor.id, comment);
+  sendPushNotificationToUsers([updated.instructorId], {
+    title: status === 'APPROVED' ? '🌴 Leave Request Approved' : '❌ Leave Request Rejected',
+    body: `Your leave request for ${updated.startDate} to ${updated.endDate} was ${status.toLowerCase()} by ${actor.fullName}.`,
+    data: { type: 'LEAVE_REVIEW', leaveId: updated.id, status },
+  }).catch((e) => console.error('[Push] Leave review alert error:', e));
   revalidatePath('/');
   return { success: true, leave: updated };
 }

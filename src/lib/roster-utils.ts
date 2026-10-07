@@ -108,3 +108,25 @@ export function mergeDutyAssignments(assignments: DutyAssignment[]): DutyAssignm
 
   return result;
 }
+
+/**
+ * Formats an ISO timestamp into a user-friendly date and time string
+ * (e.g. "Oct 1, 2026, 09:55 AM").
+ */
+export function formatApplicationDateTime(isoStr?: string): string {
+  if (!isoStr) return 'N/A';
+  try {
+    const d = new Date(isoStr);
+    if (isNaN(d.getTime())) return isoStr;
+    return d.toLocaleString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  } catch {
+    return isoStr;
+  }
+}

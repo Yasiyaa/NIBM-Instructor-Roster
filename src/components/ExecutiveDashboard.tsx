@@ -29,6 +29,7 @@ import {
 import { reviewLeaveAction, getExecutiveReportAction, getAuditLogsAction } from '@/lib/actions';
 import { WeeklyScheduleView } from '@/components/WeeklyScheduleView';
 import { AiCopilotDrawer } from './AiCopilotDrawer';
+import { formatApplicationDateTime } from '@/lib/roster-utils';
 
 const AUDIT_ACTION_LABELS: Record<string, string> = {
   DUTY_ASSIGNED: 'Duty Assigned',
@@ -630,6 +631,10 @@ export const ExecutiveDashboard: React.FC<ExecutiveDashboardProps> = ({
                     <span className="text-xs bg-amber-500/15 text-amber-400 font-semibold px-2 py-0.5 rounded">
                       {leave.startDate} {leave.startDate !== leave.endDate && `→ ${leave.endDate}`}
                     </span>
+                  </div>
+                  <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
+                    <Clock className="w-3 h-3 text-amber-400 shrink-0" />
+                    <span>Applied: <strong className="text-slate-300 font-medium">{formatApplicationDateTime(leave.appliedAt || leave.createdAt)}</strong></span>
                   </div>
                   <p className="text-xs text-slate-400 mt-2 bg-slate-800/60 p-2 rounded border border-slate-800">
                     <strong>Reason:</strong> {leave.reason}
